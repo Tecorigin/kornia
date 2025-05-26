@@ -95,7 +95,12 @@ def joint_pdf(kernel_values1: Tensor, kernel_values2: Tensor, epsilon: float = 1
             f" Got {kernel_values1.shape} and {kernel_values2.shape}"
         )
 
-    joint_kernel_values = torch.matmul(kernel_values1.transpose(1, 2), kernel_values2)
+    # SDAA torch.matmul not support fp64
+    if kernel_values1.dtype == torch.float64 and 'sdaa' in kernel_values1.device.type:
+        device = kernel_values1.device
+        joint_kernel_values = torch.matmul(kernel_values1.cpu().transpose(1, 2), kernel_values2.cpu()).to(device)
+    else:
+        joint_kernel_values = torch.matmul(kernel_values1.transpose(1, 2), kernel_values2)
     normalization = torch.sum(joint_kernel_values, dim=(1, 2)).view(-1, 1, 1) + epsilon
     pdf = joint_kernel_values / normalization
 

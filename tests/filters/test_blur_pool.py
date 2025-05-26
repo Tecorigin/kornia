@@ -77,9 +77,10 @@ class TestMaxBlurPool(BaseTester):
         expected = op(img, kernel_size)
         self.assert_close(actual, expected)
 
-    @pytest.mark.parametrize("kernel_size", [3, (5, 5)])
-    @pytest.mark.parametrize("batch_size", [1, 2])
-    @pytest.mark.parametrize("ceil_mode", [True, False])
+    # @pytest.mark.parametrize("kernel_size", [3, (5, 5)])
+    # @pytest.mark.parametrize("batch_size", [1, 2])
+    # @pytest.mark.parametrize("ceil_mode", [True, False])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, batch_size, kernel_size, ceil_mode, device, dtype, torch_optimizer):
         data = torch.ones(batch_size, 3, 10, 10, device=device, dtype=dtype)
         op = MaxBlurPool2D(kernel_size, ceil_mode=ceil_mode)
@@ -136,9 +137,10 @@ class TestBlurPool(BaseTester):
         expected = op(img, kernel_size)
         self.assert_close(actual, expected)
 
-    @pytest.mark.parametrize("kernel_size", [3, (5, 5)])
-    @pytest.mark.parametrize("batch_size", [1, 2])
-    @pytest.mark.parametrize("stride", [1, 2])
+    # @pytest.mark.parametrize("kernel_size", [3, (5, 5)])
+    # @pytest.mark.parametrize("batch_size", [1, 2])
+    # @pytest.mark.parametrize("stride", [1, 2])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, batch_size, kernel_size, stride, device, dtype, torch_optimizer):
         data = torch.ones(batch_size, 3, 10, 10, device=device, dtype=dtype)
         op = BlurPool2D(kernel_size, stride=stride)
@@ -202,8 +204,9 @@ class TestEdgeAwareBlurPool(BaseTester):
         blur = edge_aware_blur_pool2d(img, kernel_size=3, edge_threshold=32.0)
         self.assert_close(img, blur)
 
-    @pytest.mark.parametrize("kernel_size", [3, (5, 5)])
-    @pytest.mark.parametrize("batch_size", [1, 2])
+    # @pytest.mark.parametrize("kernel_size", [3, (5, 5)])
+    # @pytest.mark.parametrize("batch_size", [1, 2])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, batch_size, kernel_size, device, dtype, torch_optimizer):
         op = edge_aware_blur_pool2d
         data = torch.rand(batch_size, 3, 4, 5, device=device, dtype=dtype)

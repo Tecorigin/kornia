@@ -79,8 +79,14 @@ def compose_transformations(trans_01: Tensor, trans_12: Tensor) -> Tensor:
     tvec_12: Tensor = trans_12[..., :3, -1:]  # Nx3x1
 
     # compute the actual transforms composition
-    rmat_02: Tensor = torch.matmul(rmat_01, rmat_12)
-    tvec_02: Tensor = torch.matmul(rmat_01, tvec_12) + tvec_01
+    # SDAA not support matmul fp64
+    if 'sdaa' in rmat_01.device.type and rmat_01.dtype == torch.float64:
+        device = rmat_01.device
+        rmat_02: Tensor = torch.matmul(rmat_01.cpu(), rmat_12.cpu()).to(device)
+        tvec_02: Tensor = torch.matmul(rmat_01.cpu(), tvec_12.cpu()).to(device) + tvec_01
+    else:
+        rmat_02: Tensor = torch.matmul(rmat_01, rmat_12)
+        tvec_02: Tensor = torch.matmul(rmat_01, tvec_12) + tvec_01
 
     # pack output tensor
     trans_02: Tensor = zeros_like(trans_01)
@@ -123,7 +129,12 @@ def inverse_transformation(trans_12: Tensor) -> Tensor:
 
     # compute the actual inverse
     rmat_21 = torch.transpose(rmat_12, -1, -2)
-    tvec_21 = torch.matmul(-rmat_21, tvec_12)
+    # SDAA matmul not support fp64
+    if 'sdaa' in rmat_21.device.type and rmat_21.dtype == torch.float64:
+        device = rmat_21.device
+        tvec_21 = torch.matmul(-rmat_21.cpu(), tvec_12.cpu()).to(device)
+    else:
+        tvec_21 = torch.matmul(-rmat_21, tvec_12)
 
     # pack to output tensor
     trans_21 = zeros_like(trans_12)
@@ -211,7 +222,12 @@ def transform_points(trans_01: Tensor, points_1: Tensor) -> Tensor:
     # to homogeneous
     points_1_h = convert_points_to_homogeneous(points_1)  # BxNxD+1
     # transform coordinates
-    points_0_h = torch.bmm(points_1_h, trans_01.permute(0, 2, 1))
+    # SDAA torch.bmm not support fp64
+    if points_1_h.dtype == torch.float64 and 'sdaa' in points_1_h.device.type:
+        device = points_1_h.device
+        points_0_h = torch.bmm(points_1_h.cpu(), trans_01.permute(0, 2, 1).cpu()).to(device)
+    else:
+        points_0_h = torch.bmm(points_1_h, trans_01.permute(0, 2, 1))
     points_0_h = torch.squeeze(points_0_h, dim=-1)
     # to euclidean
     points_0 = convert_points_from_homogeneous(points_0_h)  # BxNxD

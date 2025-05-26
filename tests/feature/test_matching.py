@@ -520,6 +520,7 @@ class TestLightGlueDISK(BaseTester):
 
 
 class TestLightGlueHardNet(BaseTester):
+    @pytest.mark.skip(reason="download weight from github")
     def test_smoke(self):
         lg = LightGlueMatcher("doghardnet")
         assert isinstance(lg, LightGlueMatcher)

@@ -102,7 +102,8 @@ class TestVisualPrompter(BaseTester):
     @pytest.mark.skip(reason="Unnecessary test")
     def test_module(self): ...
 
-    @pytest.mark.skipif(torch_version() in {"2.1.2", "2.0.1"}, reason="Not working well")
+    # @pytest.mark.skipif(torch_version() in {"2.1.2", "2.0.1"}, reason="Not working well")
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, torch_optimizer):
         dtype = torch.float32
         batch_size = 1

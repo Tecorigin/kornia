@@ -111,8 +111,9 @@ class TestGuidedBlur(BaseTester):
             "- Failing with: Argument of Integer should be of numeric type, got s3 + 3."
         ),
     )
-    @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
-    @pytest.mark.parametrize("subsample", [1, 2])
+    # @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
+    # @pytest.mark.parametrize("subsample", [1, 2])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, kernel_size, subsample, device, dtype, torch_optimizer):
         guide = torch.ones(2, 3, 8, 8, device=device, dtype=dtype)
         data = torch.ones(2, 3, 8, 8, device=device, dtype=dtype)

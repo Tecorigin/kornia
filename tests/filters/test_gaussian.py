@@ -285,8 +285,9 @@ class TestGaussianBlur2d(BaseTester):
 
         self.assert_close(op(img, *params), op_module(img))
 
-    @pytest.mark.parametrize("kernel_size", [3, (5, 5), (5, 7)])
-    @pytest.mark.parametrize("sigma", [(1.5, 2.1), (0.5, 0.5)])
+    # @pytest.mark.parametrize("kernel_size", [3, (5, 5), (5, 7)])
+    # @pytest.mark.parametrize("sigma", [(1.5, 2.1), (0.5, 0.5)])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, kernel_size, sigma, device, dtype, torch_optimizer):
         data = torch.ones(1, 3, 5, 5, device=device, dtype=dtype)
 

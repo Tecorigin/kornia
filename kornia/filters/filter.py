@@ -144,7 +144,8 @@ def filter2d(
     input = input.view(-1, tmp_kernel.size(0), input.size(-2), input.size(-1))
 
     # convolve the tensor with the kernel.
-    output = F.conv2d(input, tmp_kernel, groups=tmp_kernel.size(0), padding=0, stride=1)
+    device = input.device
+    output = F.conv2d(input.cpu(), tmp_kernel.cpu(), groups=tmp_kernel.size(0), padding=0, stride=1).to(device)
 
     if padding == "same":
         out = output.view(b, c, h, w)

@@ -194,7 +194,8 @@ class TestResize(BaseTester):
         inp = torch.rand(1, 2, 3, 4, device=device, dtype=torch.float64)
         self.gradcheck(kornia.geometry.transform.Resize(new_size, align_corners=False), (inp,))
 
-    @pytest.mark.parametrize("anti_alias", [True, False])
+    # @pytest.mark.parametrize("anti_alias", [True, False])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, anti_alias, torch_optimizer):
         new_size = (5, 6)
         inp = torch.rand(1, 2, 3, 4, device=device, dtype=dtype)

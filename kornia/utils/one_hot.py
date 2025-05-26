@@ -59,4 +59,9 @@ def one_hot(labels: Tensor, num_classes: int, device: torch.device, dtype: torch
     shape = labels.shape
     one_hot = zeros((shape[0], num_classes) + shape[1:], device=device, dtype=dtype)
 
-    return one_hot.scatter_(1, labels.unsqueeze(1), 1.0) + eps
+    # SDAA not support fp64 scatter
+    if 'sdaa' in one_hot.device.type and one_hot.dtype == torch.float64:
+        device = one_hot.device
+        return one_hot.cpu().scatter_(1, labels.unsqueeze(1).cpu(), 1.0).to(device) + eps
+    else:
+        return one_hot.scatter_(1, labels.unsqueeze(1), 1.0) + eps

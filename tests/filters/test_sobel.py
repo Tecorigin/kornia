@@ -257,10 +257,11 @@ class TestSpatialGradient(BaseTester):
         actual = op_module(img)
         self.assert_close(actual, expected)
 
-    @pytest.mark.parametrize("mode", ["sobel", "diff"])
-    @pytest.mark.parametrize("order", [1, 2])
-    @pytest.mark.parametrize("batch_size", [1, 2])
-    @pytest.mark.xfail(torch_version() in {"2.0.1"}, reason="random failing")
+    # @pytest.mark.parametrize("mode", ["sobel", "diff"])
+    # @pytest.mark.parametrize("order", [1, 2])
+    # @pytest.mark.parametrize("batch_size", [1, 2])
+    # @pytest.mark.xfail(torch_version() in {"2.0.1"}, reason="random failing")
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, batch_size, order, mode, device, dtype, torch_optimizer):
         data = torch.ones(batch_size, 3, 10, 10, device=device, dtype=dtype)
         if order == 1 and dtype == torch.float64:
@@ -425,8 +426,9 @@ class TestSpatialGradient3d(BaseTester):
         actual = op_module(img)
         self.assert_close(actual, expected)
 
-    @pytest.mark.parametrize("mode", ["diff"])
-    @pytest.mark.parametrize("order", [1, 2])
+    # @pytest.mark.parametrize("mode", ["diff"])
+    # @pytest.mark.parametrize("order", [1, 2])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, mode, order, device, dtype, torch_optimizer):
         data = torch.ones(1, 3, 1, 10, 10, device=device, dtype=dtype)
         op = SpatialGradient3d(mode, order)
@@ -520,7 +522,8 @@ class TestSobel(BaseTester):
         actual = op_module(img)
         self.assert_close(actual, expected)
 
-    @pytest.mark.parametrize("batch_size", [1, 2])
+    # @pytest.mark.parametrize("batch_size", [1, 2])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, batch_size, device, dtype, torch_optimizer):
         if dtype == torch.float64:
             # TODO: investigate sobel for float64 with dynamo

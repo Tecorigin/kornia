@@ -76,8 +76,9 @@ class Testunsharp(BaseTester):
         img = torch.ones(1, 3, 5, 5, device=device, dtype=dtype)
         self.assert_close(op(img, *params), op_module(img))
 
-    @pytest.mark.parametrize("sigma", [(3.0, 1.0), (0.5, -0.1)])
-    @pytest.mark.parametrize("params_as_tensor", [True, False])
+    # @pytest.mark.parametrize("sigma", [(3.0, 1.0), (0.5, -0.1)])
+    # @pytest.mark.parametrize("params_as_tensor", [True, False])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, sigma, params_as_tensor, device, dtype, torch_optimizer):
         if params_as_tensor is True:
             sigma = torch.tensor([sigma], device=device, dtype=dtype)

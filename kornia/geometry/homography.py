@@ -131,8 +131,14 @@ def line_segment_transfer_error_one_way(ls1: Tensor, ls2: Tensor, H: Tensor, squ
     ln2 = ps2_h.cross(pe2_h, dim=3)
     ps1_in2 = convert_points_to_homogeneous(transform_points(H, ps1))
     pe1_in2 = convert_points_to_homogeneous(transform_points(H, pe1))
-    er_st1 = (ln2 @ ps1_in2.transpose(-2, -1)).view(B, N).abs()
-    er_end1 = (ln2 @ pe1_in2.transpose(-2, -1)).view(B, N).abs()
+    # SDAA not support fp64
+    if 'sdaa' in ln2.device.type and ln2.dtype == torch.float64:
+        device = ln2.device
+        er_st1 = (ln2.cpu() @ ps1_in2.transpose(-2, -1).cpu()).to(device).view(B, N).abs()
+        er_end1 = (ln2.cpu() @ pe1_in2.transpose(-2, -1).cpu()).to(device).view(B, N).abs()
+    else:
+        er_st1 = (ln2 @ ps1_in2.transpose(-2, -1)).view(B, N).abs()
+        er_end1 = (ln2 @ pe1_in2.transpose(-2, -1)).view(B, N).abs()
     error = 0.5 * (er_st1 + er_end1)
     if squared:
         error = error**2
@@ -179,6 +185,10 @@ def find_homography_dlt(
     ay = torch.cat([x1, y1, ones, zeros, zeros, zeros, -x2 * x1, -x2 * y1, -x2], dim=-1)
     A = torch.cat((ax, ay), dim=-1).reshape(ax.shape[0], -1, ax.shape[-1])
 
+    # SDAA not support fp64
+    device = A.device
+    if 'sdaa' in A.device.type and A.dtype == torch.float64:
+        A = A.cpu()
     if weights is None:
         # All points are equally important
         A = A.transpose(-2, -1) @ A
@@ -186,8 +196,9 @@ def find_homography_dlt(
         # We should use provided weights
         if not (len(weights.shape) == 2 and weights.shape == points1.shape[:2]):
             raise AssertionError(weights.shape)
-        w_full = weights.repeat_interleave(2, dim=1).unsqueeze(1)
+        w_full = weights.repeat_interleave(2, dim=1).unsqueeze(1).to(A.device)
         A = (A.transpose(-2, -1) * w_full) @ A
+    A = A.to(device)
 
     if solver == "svd":
         try:
@@ -202,7 +213,12 @@ def find_homography_dlt(
         H = sol.reshape(-1, 3, 3)
     else:
         raise NotImplementedError
-    H = safe_inverse_with_mask(transform2)[0] @ (H @ transform1)
+    # SDAA not support fp64
+    if 'sdaa' in transform2.device.type and transform2.dtype == torch.float64:
+        device = transform2.device
+        H = (safe_inverse_with_mask(transform2)[0].cpu() @ (H.cpu() @ transform1.cpu())).to(device)
+    else:
+        H = safe_inverse_with_mask(transform2)[0] @ (H @ transform1)
     H_norm = H / (H[..., -1:, -1:] + eps)
     return H_norm
 
@@ -258,13 +274,28 @@ def sample_is_valid_for_homography(points1: Tensor, points2: Tensor) -> Tensor:
 
     src_perm = points_src_h[:, idx_perm]
     dst_perm = points_dst_h[:, idx_perm]
-    left_sign = (
-        torch.cross(src_perm[..., 1:2, :], src_perm[..., 2:3, :]) @ src_perm[..., 0:1, :].permute(0, 1, 3, 2)
-    ).sign()
-    right_sign = (
-        torch.cross(dst_perm[..., 1:2, :], dst_perm[..., 2:3, :]) @ dst_perm[..., 0:1, :].permute(0, 1, 3, 2)
-    ).sign()
-    sample_is_valid = (left_sign == right_sign).view(-1, 4).min(dim=1)[0]
+    # SDAA not support fp64
+    if 'sdaa' in src_perm.device.type and src_perm.dtype == torch.float64:
+        device = src_perm.device
+        left_sign = (
+            torch.cross(src_perm[..., 1:2, :], (src_perm[..., 2:3, :]).cpu() @ src_perm[..., 0:1, :].permute(0, 1, 3, 2).cpu()).to(device)
+        ).sign()
+        right_sign = (
+            torch.cross(dst_perm[..., 1:2, :], (dst_perm[..., 2:3, :]).cpu() @ dst_perm[..., 0:1, :].permute(0, 1, 3, 2).cpu()).to(device)
+        ).sign()
+    else:
+        left_sign = (
+            torch.cross(src_perm[..., 1:2, :], src_perm[..., 2:3, :]) @ src_perm[..., 0:1, :].permute(0, 1, 3, 2)
+        ).sign()
+        right_sign = (
+            torch.cross(dst_perm[..., 1:2, :], dst_perm[..., 2:3, :]) @ dst_perm[..., 0:1, :].permute(0, 1, 3, 2)
+        ).sign()
+    # SDAA min not support bool
+    if 'sdaa' in left_sign.device.type:
+        device = left_sign.device
+        sample_is_valid = (left_sign == right_sign).view(-1, 4).cpu().min(dim=1)[0].to(device)
+    else:
+        sample_is_valid = (left_sign == right_sign).view(-1, 4).min(dim=1)[0]
     return sample_is_valid
 
 
@@ -317,6 +348,10 @@ def find_homography_lines_dlt(ls1: Tensor, ls2: Tensor, weights: Optional[Tensor
     ay = torch.cat([A * xe1, A * ye1, A, B * xe1, B * ye1, B, C * xe1, C * ye1, C], dim=-1)
     A = torch.cat((ax, ay), dim=-1).reshape(ax.shape[0], -1, ax.shape[-1])
 
+    # SDAA not support fp64
+    device = A.device
+    if 'sdaa' in device.type and A.dtype == torch.float64:
+        A = A.cpu()
     if weights is None:
         # All points are equally important
         A = A.transpose(-2, -1) @ A
@@ -324,8 +359,9 @@ def find_homography_lines_dlt(ls1: Tensor, ls2: Tensor, weights: Optional[Tensor
         # We should use provided weights
         if not ((len(weights.shape) == 2) and (weights.shape == ls1.shape[:2])):
             raise AssertionError(weights.shape)
-        w_diag = torch.diag_embed(weights.unsqueeze(dim=-1).repeat(1, 1, 2).reshape(weights.shape[0], -1))
+        w_diag = torch.diag_embed(weights.unsqueeze(dim=-1).repeat(1, 1, 2).reshape(weights.shape[0], -1)).to(A.device)
         A = A.transpose(-2, -1) @ w_diag @ A
+    A = A.to(device)
 
     try:
         _, _, V = _torch_svd_cast(A)
@@ -334,7 +370,12 @@ def find_homography_lines_dlt(ls1: Tensor, ls2: Tensor, weights: Optional[Tensor
         return torch.empty((points1_norm.size(0), 3, 3), device=device, dtype=dtype)
 
     H = V[..., -1].view(-1, 3, 3)
-    H = safe_inverse_with_mask(transform2)[0] @ (H @ transform1)
+    # SDAA not support fp64
+    if 'sdaa' in transform2.device.type and transform2.dtype == torch.float64:
+        device = transform2.device
+        H = (safe_inverse_with_mask(transform2)[0].cpu() @ (H.cpu() @ transform1.cpu())).to(device)
+    else:
+        H = safe_inverse_with_mask(transform2)[0] @ (H @ transform1)
     H_norm = H / (H[..., -1:, -1:] + eps)
     return H_norm
 

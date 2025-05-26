@@ -73,6 +73,7 @@ class TestImage:
         assert img3.dtype == torch.uint8
         assert img3.device == device
 
+    @pytest.mark.skip(reason="Cannot pack tensors on sdaa")
     def test_dlpack(self, device, dtype):
         data = torch.rand((3, 4, 5), device=device, dtype=dtype)
         pixel_format = PixelFormat(color_space=ColorSpace.RGB, bit_depth=data.element_size() * 8)

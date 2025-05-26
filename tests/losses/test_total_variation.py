@@ -149,6 +149,7 @@ class TestTotalVariation(BaseTester):
         with pytest.raises(TypeError):
             kornia.losses.total_variation(pred)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         image = torch.rand(1, 2, 3, 4, device=device, dtype=dtype)
 

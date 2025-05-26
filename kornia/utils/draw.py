@@ -129,8 +129,14 @@ def draw_line(image: torch.Tensor, p1: torch.Tensor, p2: torch.Tensor, color: to
     x2, y2 = p2[..., 0], p2[..., 1]
     dx = x2 - x1
     dy = y2 - y1
-    dx_sign = torch.sign(dx)
-    dy_sign = torch.sign(dy)
+    # SDAA bug
+    if 'sdaa' in dy.device.type:
+        device = dy.device
+        dx_sign = torch.sign(dx.cpu()).to(device)
+        dy_sign = torch.sign(dy.cpu()).to(device)
+    else:
+        dx_sign = torch.sign(dx)
+        dy_sign = torch.sign(dy)
     dx, dy = torch.abs(dx), torch.abs(dy)
     dx_zero_mask = dx == 0
     dy_zero_mask = dy == 0
@@ -255,6 +261,14 @@ def draw_rectangle(
     if color_channels == 1 and c == 3:
         color = color.expand(batch, num_rectangle, c)
 
+    device = image.device
+    if 'sdaa' in device.type:
+        if device == color.device:
+            # SDAA tests bug in some tensor.stride
+            image = image.cpu()
+            color = color.cpu()
+        else:
+            color = color.to(device)
     for b in range(batch):
         for n in range(num_rectangle):
             if fill:
@@ -278,7 +292,7 @@ def draw_rectangle(
                     b, n, :, None
                 ]
 
-    return image
+    return image.to(device)
 
 
 def _get_convex_edges(polygon: Tensor, h: int, w: int) -> Tuple[Tensor, Tensor]:

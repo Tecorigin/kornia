@@ -126,6 +126,7 @@ class TestKMeans(BaseTester):
         self.assert_close(ordered_centers, expected_centers, atol=2, rtol=0.1)
         assert oredered_prediction == expected_prediction
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         x = TestKMeans._create_data(device, dtype)
         kmeans_params = (3, None, 10e-4, 10000, 2023)

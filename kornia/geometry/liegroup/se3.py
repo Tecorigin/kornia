@@ -186,7 +186,12 @@ class Se3(Module):
         omega = v[..., 3:]
         omega_hat = So3.hat(omega)
         omega_hat_sq = omega_hat @ omega_hat
-        theta = batched_dot_product(omega, omega).sqrt()
+        # SDAA tensor 0.sqrt bug
+        if 'sdaa' in omega.device.type:
+            device = omega.device
+            theta = batched_dot_product(omega, omega).cpu().sqrt().to(device)
+        else:
+            theta = batched_dot_product(omega, omega).sqrt()
         R = So3.exp(omega)
         V = (
             eye(3, device=v.device, dtype=v.dtype)
@@ -207,7 +212,11 @@ class Se3(Module):
 
         """
         omega = self.r.log()
-        theta = batched_dot_product(omega, omega).sqrt()
+        if 'sdaa' in omega.device.type:
+            device = omega.device
+            theta = batched_dot_product(omega, omega).cpu().sqrt().to(device)
+        else:
+            theta = batched_dot_product(omega, omega).sqrt()
         t = self.t.data
         omega_hat = So3.hat(omega)
         omega_hat_sq = omega_hat @ omega_hat

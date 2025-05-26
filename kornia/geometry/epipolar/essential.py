@@ -76,11 +76,16 @@ def run_5point(points1: torch.Tensor, points2: torch.Tensor, weights: Optional[t
     X = torch.cat([x1 * x2, x1 * y2, x1, y1 * x2, y1 * y2, y1, x2, y2, ones], dim=-1)
 
     # apply the weights to the linear system
+    # SDAA mm not support fp64
+    device = X.device
+    if 'sdaa' in X.device.type and X.dtype == torch.float64:
+        X = X.cpu()
     if weights is None:
         X = X.transpose(-2, -1) @ X
     else:
-        w_diag = torch.diag_embed(weights)
+        w_diag = torch.diag_embed(weights).to(X.device)
         X = X.transpose(-2, -1) @ w_diag @ X
+    X = X.to(device)
 
     # use Nister's 5PC to solve essential matrix
     E_Nister = null_to_Nister_solution(X, batch_size)
@@ -205,7 +210,7 @@ def null_to_Nister_solution(X: torch.Tensor, batch_size: int) -> torch.Tensor:
     C[:, 0:-1, 1:] = eye_mat
 
     cs_de = cs[:, -1].unsqueeze(-1)
-    cs_de = torch.where(cs_de == 0, torch.tensor(1e-8, dtype=cs_de.dtype), cs_de)
+    cs_de = torch.where(cs_de == 0, torch.tensor(1e-8, dtype=cs_de.dtype, device=cs_de.device), cs_de)
     C[:, -1, :] = -cs[:, :-1] / cs_de
 
     roots = torch.real(torch.linalg.eigvals(C))
@@ -242,7 +247,12 @@ def null_to_Nister_solution(X: torch.Tensor, batch_size: int) -> torch.Tensor:
 
     xzs = torch.matmul(torch.inverse(Bs[:, :, 0:2, 0:2]), bs[:, :, 0:2])
 
-    mask = (abs(Bs[:, 2].unsqueeze(1) @ xzs - bs[:, 2].unsqueeze(1)) > 1e-3).flatten()
+    # SDAA not support fp64
+    if 'sdaa' in Bs.device.type and Bs.dtype == torch.float64:
+        device = Bs.device
+        mask = (abs((Bs[:, 2].unsqueeze(1).cpu() @ xzs.cpu()).to(device) - bs[:, 2].unsqueeze(1)) > 1e-3).flatten()
+    else:
+        mask = (abs(Bs[:, 2].unsqueeze(1) @ xzs - bs[:, 2].unsqueeze(1)) > 1e-3).flatten()
 
     # mask: bx10x1x1
     mask = (
@@ -295,7 +305,12 @@ def essential_from_fundamental(F_mat: torch.Tensor, K1: torch.Tensor, K2: torch.
     KORNIA_CHECK_SHAPE(F_mat, ["*", "3", "3"])
     KORNIA_CHECK_SHAPE(K1, ["*", "3", "3"])
     KORNIA_CHECK_SHAPE(K2, ["*", "3", "3"])
-    return K2.transpose(-2, -1) @ F_mat @ K1
+    # SDAA mm not support fp64
+    if 'sdaa' in F_mat.device.type and F_mat.dtype == torch.float64:
+        device = F_mat.device
+        return (K2.transpose(-2, -1).cpu() @ F_mat.cpu() @ K1.cpu()).to(device)
+    else:
+        return K2.transpose(-2, -1) @ F_mat @ K1
 
 
 def decompose_essential_matrix(E_mat: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -331,8 +346,14 @@ def decompose_essential_matrix(E_mat: torch.Tensor) -> Tuple[torch.Tensor, torch
     W[..., 2, 2] += 1.0
 
     # reconstruct rotations and retrieve translation vector
-    U_W_Vt = U @ W @ Vt
-    U_Wt_Vt = U @ W.transpose(-2, -1) @ Vt
+    # SDAA not support fp64
+    if 'sdaa' in U.device.type and U.dtype == torch.float64:
+        device = U.device
+        U_W_Vt = (U.cpu() @ W.cpu() @ Vt.cpu()).to(device)
+        U_Wt_Vt = (U.cpu() @ W.transpose(-2, -1).cpu() @ Vt.cpu()).to(device)
+    else:
+        U_W_Vt = U @ W @ Vt
+        U_Wt_Vt = U @ W.transpose(-2, -1) @ Vt
 
     # return values
     R1 = U_W_Vt
@@ -366,7 +387,12 @@ def decompose_essential_matrix_no_svd(E_mat: torch.Tensor) -> Tuple[torch.Tensor
     e1, e2, e3 = E_mat[..., 0], E_mat[..., 1], E_mat[..., 2]
 
     # sqrt(1/2 trace(EE^T)), B
-    scale_factor = torch.sqrt(0.5 * torch.diagonal(E_mat @ E_mat.transpose(-1, -2), dim1=-1, dim2=-2).sum(-1))
+    # SDAA not support fp64
+    if 'sdaa' in E_mat.device.type and E_mat.dtype == torch.float64:
+        device = E_mat.device
+        scale_factor = torch.sqrt(0.5 * torch.diagonal((E_mat.cpu() @ E_mat.transpose(-1, -2).cpu()).to(device), dim1=-1, dim2=-2).sum(-1))
+    else:
+        scale_factor = torch.sqrt(0.5 * torch.diagonal(E_mat @ E_mat.transpose(-1, -2), dim1=-1, dim2=-2).sum(-1))
 
     # B, 3, 3
     cross_products = torch.stack([torch.cross(e1, e2), torch.cross(e2, e3), torch.cross(e3, e1)], dim=1)
@@ -400,8 +426,14 @@ def decompose_essential_matrix_no_svd(E_mat: torch.Tensor) -> Tuple[torch.Tensor
 
     # Eq.24, recover R
     # (bb)R = Cofactors(E)^T - BE
-    R1 = (matrix_cofactor_tensor(E_mat) - B1 @ E_mat) / (b1 * b1).sum().unsqueeze(-1)
-    R2 = (matrix_cofactor_tensor(E_mat) - B2 @ E_mat) / (b2 * b2).sum().unsqueeze(-1)
+    # SDAA not supprot fp64
+    if 'sdaa' in E_mat.device.type and E_mat.dtype == torch.float64:
+        device = E_mat.device
+        R1 = (matrix_cofactor_tensor(E_mat) - (B1.cpu() @ E_mat.cpu()).to(device)) / (b1 * b1).sum().unsqueeze(-1)
+        R2 = (matrix_cofactor_tensor(E_mat) - (B2.cpu() @ E_mat.cpu()).to(device)) / (b2 * b2).sum().unsqueeze(-1)
+    else:    
+        R1 = (matrix_cofactor_tensor(E_mat) - B1 @ E_mat) / (b1 * b1).sum().unsqueeze(-1)
+        R2 = (matrix_cofactor_tensor(E_mat) - B2 @ E_mat) / (b2 * b2).sum().unsqueeze(-1)
 
     return (R1, R2, b1_.unsqueeze(-1))
 
@@ -432,7 +464,12 @@ def essential_from_Rt(R1: torch.Tensor, t1: torch.Tensor, R2: torch.Tensor, t2: 
     # get the cross product from relative translation vector
     Tx = cross_product_matrix(t[..., 0])
 
-    return Tx @ R
+    # SDAA not support fp64
+    if 'sdaa' in Tx.device.type and Tx.dtype == torch.float64:
+        device = Tx.device
+        return (Tx.cpu() @ R.cpu()).to(device)
+    else:
+        return Tx @ R
 
 
 def motion_from_essential(E_mat: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -591,11 +628,20 @@ def relative_camera_motion(
     KORNIA_CHECK_SHAPE(t1, ["*", "3", "1"])
     KORNIA_CHECK_SHAPE(t2, ["*", "3", "1"])
 
-    # compute first the relative rotation
-    R = R2 @ R1.transpose(-2, -1)
+    # SDAA not support fp64
+    if 'sdaa' in R2.device.type and R2.dtype == torch.float64:
+        device = R2.device
+        # compute first the relative rotation
+        R = R2.cpu() @ R1.transpose(-2, -1).cpu()
 
-    # compute the relative translation vector
-    t = t2 - R @ t1
+        # compute the relative translation vector
+        t = t2 - (R @ t1.cpu()).to(device)
+    else:
+        # compute first the relative rotation
+        R = R2 @ R1.transpose(-2, -1)
+
+        # compute the relative translation vector
+        t = t2 - R @ t1
 
     return R, t
 

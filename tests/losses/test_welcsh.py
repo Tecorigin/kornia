@@ -48,6 +48,7 @@ class TestWelschLoss(BaseTester):
 
         self.gradcheck(kornia.losses.welsch_loss, (img1, img2))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         img1 = torch.rand(2, 3, 3, 3, device=device, dtype=dtype)
         img2 = torch.rand(2, 3, 3, 3, device=device, dtype=dtype)

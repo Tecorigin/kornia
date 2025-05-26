@@ -88,7 +88,12 @@ def differentiable_polynomial_rounding(input: Tensor) -> Tensor:
 
     """
     # Perform differentiable rounding
-    input_round = input.round()
+    # SDAA round not support fp64
+    if 'sdaa' in input.device.type and input.dtype == torch.float64:
+        device = input.device
+        input_round = input.cpu().round().to(device)
+    else:
+        input_round = input.round()
     output: Tensor = input_round + (input - input_round) ** 3
     return output
 

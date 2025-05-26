@@ -113,8 +113,9 @@ class TestMedianBlur(BaseTester):
         expected = op(img, kernel_size)
         self.assert_close(actual, expected)
 
-    @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
-    @pytest.mark.parametrize("batch_size", [1, 2])
+    # @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
+    # @pytest.mark.parametrize("batch_size", [1, 2])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, batch_size, kernel_size, device, dtype, torch_optimizer):
         data = torch.ones(batch_size, 3, 10, 10, device=device, dtype=dtype)
         op = MedianBlur(kernel_size)

@@ -118,7 +118,13 @@ class PatchDominantGradientOrientation(nn.Module):
             )
             ang_bins_list.append(ang_bins_i)
         ang_bins = torch.cat(ang_bins_list, 1).view(-1, 1, self.num_ang_bins)
-        ang_bins = self.angular_smooth(ang_bins).view(-1, self.num_ang_bins)
+        # SDAA subnormal
+        if 'sdaa' in ang_bins.device.type:
+            device = ang_bins.device
+            self.angular_smooth = self.angular_smooth.cpu()
+            ang_bins = self.angular_smooth(ang_bins.cpu()).view(-1, self.num_ang_bins).to(device)
+        else:
+            ang_bins = self.angular_smooth(ang_bins).view(-1, self.num_ang_bins)
         values, indices = ang_bins.max(1)
         indices_left = (self.num_ang_bins + indices - 1) % self.num_ang_bins
         indices_right = (indices + 1) % self.num_ang_bins

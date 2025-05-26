@@ -50,6 +50,7 @@ class TestRenderGaussian2d:
         actual = kornia.geometry.subpix.render_gaussian2d(mean, std, (5, 5), True)
         assert_close(actual, gaussian, rtol=0, atol=1e-4)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         mean = torch.tensor([0.0, 0.0], dtype=dtype, device=device)
         std = torch.tensor([0.25, 0.25], dtype=dtype, device=device)
@@ -71,6 +72,7 @@ class TestSpatialSoftmax2d:
         sums = actual.sum(-1).sum(-1)
         assert_close(sums, torch.ones_like(sums))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, input, torch_optimizer):
         op = kornia.geometry.subpix.spatial_softmax2d
         op_optimized = torch_optimizer(op)

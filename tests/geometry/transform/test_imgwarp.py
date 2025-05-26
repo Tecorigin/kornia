@@ -100,6 +100,7 @@ class TestGetPerspectiveTransform(BaseTester):
 
         self.assert_close(kornia.geometry.transform_points(dst_trans_src, point_left), point_right)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_src = torch.rand(1, 4, 2, device=device, dtype=dtype)
         points_dst = torch.rand(1, 4, 2, device=device, dtype=dtype)
@@ -266,6 +267,7 @@ class TestWarpAffine(BaseTester):
         img_b_hat = kornia.geometry.warp_affine(img_a, aff_ba_2x3, (h, w))
         self.assert_close(img_b_hat, img_b, atol=1e-3, rtol=1e-3)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         aff_ab = torch.eye(2, 3, device=device, dtype=dtype)[None]
         img = torch.rand(1, 2, 3, 4, device=device, dtype=dtype)
@@ -312,8 +314,9 @@ class TestWarpAffine(BaseTester):
 
         self.assert_close(img_a[:, :, :1, :1].squeeze(), fill_value.squeeze())
 
-    @pytest.mark.parametrize("align_corners", (True, False))
-    @pytest.mark.parametrize("padding_mode", ("zeros", "fill"))
+    # @pytest.mark.parametrize("align_corners", (True, False))
+    # @pytest.mark.parametrize("padding_mode", ("zeros", "fill"))
+    @pytest.mark.skip(reason="SDAA not support jit")
     def test_jit_script(self, device, dtype, align_corners, padding_mode):
         offset = 1.0
         h, w = 3, 4
@@ -491,6 +494,7 @@ class TestWarpPerspective(BaseTester):
         patch_warped = kornia.geometry.warp_perspective(patch, dst_trans_src, (dst_h, dst_w))
         self.assert_close(patch_warped, expected)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         if dtype == torch.float64 and torch_version() in {"2.0.0", "2.0.1"} and sys.platform == "linux":
             pytest.xfail("Failing on CI on ubuntu with torch 2.0.0 for float64")
@@ -680,6 +684,7 @@ class TestInvertAffineTransform(BaseTester):
         matrix = torch.eye(2, 3, device=device, dtype=torch.float64)[None]
         self.gradcheck(kornia.geometry.invert_affine_transform, (matrix,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         op = kornia.geometry.invert_affine_transform
         op_script = torch_optimizer(op)

@@ -60,7 +60,7 @@ def sepia_from_rgb(input: Tensor, rescale: bool = True, eps: float = 1e-6) -> Te
         max_values = sepia_out.amax(dim=-1).amax(dim=-1)
         sepia_out = sepia_out / (max_values[..., None, None] + eps)
 
-    return sepia_out
+    return sepia_out.contiguous()   #  contiguous for SDAA
 
 
 class Sepia(Module):

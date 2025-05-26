@@ -350,7 +350,12 @@ def axis_angle_to_rotation_matrix(axis_angle: Tensor) -> Tensor:
     # stolen from ceres/rotation.h
 
     _axis_angle = torch.unsqueeze(axis_angle, dim=1)
-    theta2 = torch.matmul(_axis_angle, _axis_angle.transpose(1, 2))
+    # SDAA matmul not support fp64
+    if 'sdaa' in _axis_angle.device.type and _axis_angle.dtype == torch.float64:
+        device = _axis_angle.device
+        theta2 = torch.matmul(_axis_angle.cpu(), _axis_angle.transpose(1, 2).cpu()).to(device)
+    else:
+        theta2 = torch.matmul(_axis_angle, _axis_angle.transpose(1, 2))
     theta2 = torch.squeeze(theta2, dim=1)
 
     # compute rotation matrices
@@ -727,7 +732,10 @@ def quaternion_exp_to_log(quaternion: Tensor, eps: float = 1.0e-8) -> Tensor:
     norm_q: Tensor = torch.norm(quaternion_vector, p=2, dim=-1, keepdim=True).clamp(min=eps)
 
     # apply log map
-    quaternion_log: Tensor = quaternion_vector * torch.acos(torch.clamp(quaternion_scalar, min=-1.0, max=1.0)) / norm_q
+    if 'sdaa' in quaternion_scalar.device.type:
+        quaternion_log: Tensor = quaternion_vector * torch.acos(torch.clamp(quaternion_scalar, min=-1.0, max=1.0).cpu()).to(norm_q.device) / norm_q
+    else:
+        quaternion_log: Tensor = quaternion_vector * torch.acos(torch.clamp(quaternion_scalar, min=-1.0, max=1.0)) / norm_q
 
     return quaternion_log
 
@@ -1052,7 +1060,12 @@ def normalize_homography(
     dst_norm_trans_dst_pix: Tensor = normal_transform_pixel(dst_h, dst_w).to(dst_pix_trans_src_pix)
 
     # compute chain transformations
-    dst_norm_trans_src_norm: Tensor = dst_norm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_pix_trans_src_norm)
+    # SDAA not support fp64
+    if 'sdaa' in dst_norm_trans_dst_pix.device.type and dst_norm_trans_dst_pix.dtype == torch.float64:
+        device = dst_norm_trans_dst_pix.device
+        dst_norm_trans_src_norm: Tensor = (dst_norm_trans_dst_pix.cpu() @ (dst_pix_trans_src_pix.cpu() @ src_pix_trans_src_norm.cpu())).to(device)
+    else:
+        dst_norm_trans_src_norm: Tensor = dst_norm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_pix_trans_src_norm)
     return dst_norm_trans_src_norm
 
 
@@ -1159,7 +1172,12 @@ def denormalize_homography(
     dst_norm_trans_dst_pix: Tensor = normal_transform_pixel(dst_h, dst_w).to(dst_pix_trans_src_pix)
     dst_denorm_trans_dst_pix = _torch_inverse_cast(dst_norm_trans_dst_pix)
     # compute chain transformations
-    dst_norm_trans_src_norm: Tensor = dst_denorm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_norm_trans_src_pix)
+    # SDAA not support fp64
+    if 'sdaa' in dst_denorm_trans_dst_pix.device.type and dst_denorm_trans_dst_pix.dtype == torch.float64:
+        device = dst_denorm_trans_dst_pix.device
+        dst_norm_trans_src_norm: Tensor = (dst_denorm_trans_dst_pix.cpu() @ (dst_pix_trans_src_pix.cpu() @ src_norm_trans_src_pix.cpu())).to(device)
+    else:
+        dst_norm_trans_src_norm: Tensor = dst_denorm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_norm_trans_src_pix)
     return dst_norm_trans_src_norm
 
 
@@ -1196,7 +1214,12 @@ def normalize_homography3d(
     src_pix_trans_src_norm = _torch_inverse_cast(src_norm_trans_src_pix)
     dst_norm_trans_dst_pix: Tensor = normal_transform_pixel3d(dst_d, dst_h, dst_w).to(dst_pix_trans_src_pix)
     # compute chain transformations
-    dst_norm_trans_src_norm: Tensor = dst_norm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_pix_trans_src_norm)
+    # SDAA not support fp64
+    if 'sdaa' in dst_norm_trans_dst_pix.device.type and dst_norm_trans_dst_pix.dtype == torch.float64:
+        device = dst_norm_trans_dst_pix.device
+        dst_norm_trans_src_norm: Tensor = (dst_norm_trans_dst_pix.cpu() @ (dst_pix_trans_src_pix.cpu() @ src_pix_trans_src_norm.cpu())).to(device)
+    else:
+        dst_norm_trans_src_norm: Tensor = dst_norm_trans_dst_pix @ (dst_pix_trans_src_pix @ src_pix_trans_src_norm)
     return dst_norm_trans_src_norm
 
 
@@ -1356,7 +1379,12 @@ def camtoworld_graphics_to_vision_4x4(extrinsics_graphics: Tensor) -> Tensor:
         dtype=extrinsics_graphics.dtype,
         device=extrinsics_graphics.device,
     )
-    return extrinsics_graphics @ invert_yz
+    # SDAA not support fp64
+    if 'sdaa' in invert_yz.device.type and invert_yz.dtype == torch.float64:
+        device = invert_yz.device
+        return (extrinsics_graphics.cpu() @ invert_yz.cpu()).to(device)
+    else:
+        return extrinsics_graphics @ invert_yz
 
 
 def camtoworld_graphics_to_vision_Rt(R: Tensor, t: Tensor) -> tuple[Tensor, Tensor]:
@@ -1416,7 +1444,12 @@ def camtoworld_vision_to_graphics_4x4(extrinsics_vision: Tensor) -> Tensor:
         dtype=extrinsics_vision.dtype,
         device=extrinsics_vision.device,
     )
-    return extrinsics_vision @ invert_yz
+    # SDAA not support fp64
+    if 'sdaa' in invert_yz.device.type and invert_yz.dtype == torch.float64:
+        device = invert_yz.device
+        return (extrinsics_vision.cpu() @ invert_yz.cpu()).to(device)
+    else:
+        return extrinsics_vision @ invert_yz
 
 
 def camtoworld_vision_to_graphics_Rt(R: Tensor, t: Tensor) -> tuple[Tensor, Tensor]:
@@ -1477,7 +1510,12 @@ def camtoworld_to_worldtocam_Rt(R: Tensor, t: Tensor) -> tuple[Tensor, Tensor]:
     KORNIA_CHECK_SHAPE(t, ["B", "3", "1"])
 
     R_inv = R.transpose(1, 2)
-    new_t: Tensor = -R_inv @ t
+    # SDAA not support fp64
+    if 'sdaa' in R_inv.device.type and R_inv.dtype == torch.float64:
+        device = R_inv.device
+        new_t: Tensor = (-R_inv.cpu() @ t.cpu()).to(device)
+    else:
+        new_t: Tensor = -R_inv @ t
 
     return (R_inv, new_t)
 
@@ -1507,7 +1545,12 @@ def worldtocam_to_camtoworld_Rt(R: Tensor, t: Tensor) -> tuple[Tensor, Tensor]:
     KORNIA_CHECK_SHAPE(t, ["B", "3", "1"])
 
     R_inv = R.transpose(1, 2)
-    new_t: Tensor = -R_inv @ t
+    # SDAA not support fp64
+    if 'sdaa' in R_inv.device.type and R_inv.dtype == torch.float64:
+        device = R_inv.device
+        new_t: Tensor = (-R_inv.cpu() @ t.cpu()).to(device)
+    else:
+        new_t: Tensor = -R_inv @ t
 
     return (R_inv, new_t)
 

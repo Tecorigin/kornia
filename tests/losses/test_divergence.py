@@ -115,6 +115,7 @@ class TestDivergenceLoss(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.losses.js_div_loss_2d, (pred, target))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo_kl(self, device, dtype, torch_optimizer):
         pred = torch.full((1, 1, 2, 4), 0.125, dtype=dtype, device=device)
         target = torch.full((1, 1, 2, 4), 0.125, dtype=dtype, device=device)
@@ -123,6 +124,7 @@ class TestDivergenceLoss(BaseTester):
         op_optimized = torch_optimizer(op)
         self.assert_close(op(*args), op_optimized(*args), rtol=0, atol=1e-5)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo_js(self, device, dtype, torch_optimizer):
         pred = torch.full((1, 1, 2, 4), 0.125, dtype=dtype, device=device)
         target = torch.full((1, 1, 2, 4), 0.125, dtype=dtype, device=device)

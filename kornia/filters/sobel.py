@@ -70,7 +70,8 @@ def spatial_gradient(input: Tensor, mode: str = "sobel", order: int = 1, normali
     out_channels: int = 3 if order == 2 else 2
     padded_inp: Tensor = pad(input.reshape(b * c, 1, h, w), spatial_pad, "replicate")
     out = F.conv2d(padded_inp, tmp_kernel, groups=1, padding=0, stride=1)
-    return out.reshape(b, c, out_channels, h, w)
+    # SDAA contiguous bug
+    return out.reshape(b, c, out_channels, h, w).contiguous()
 
 
 def spatial_gradient3d(input: Tensor, mode: str = "diff", order: int = 1) -> Tensor:

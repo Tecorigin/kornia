@@ -36,6 +36,7 @@ class TestHyNet(BaseTester):
         out = hynet(inp)
         assert out.shape == (16, 128)
 
+    @pytest.mark.skip(reason="SDAA batch_norm not support fp64")
     def test_gradcheck(self, device):
         patches = torch.rand(2, 1, 32, 32, device=device, dtype=torch.float64)
         hynet = HyNet().to(patches.device, patches.dtype)

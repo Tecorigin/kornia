@@ -69,6 +69,7 @@ class TestAddWeighted(BaseTester):
             gamma = gamma.to(src1)
         self.assert_close(TestAddWeighted.fcn(src1, alpha, src2, beta, gamma), src1 * alpha + src2 * beta + gamma)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         src1, src2, alpha, beta, gamma = self.get_input(device, dtype, size=3)
         inputs = (src1, alpha, src2, beta, gamma)

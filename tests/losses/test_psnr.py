@@ -53,6 +53,7 @@ class TestPSNRLoss(BaseTester):
         actual = kornia.losses.psnr_loss(pred, 1.2 * pred, 2.0)
         self.assert_close(actual, expected)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         pred = torch.rand(2, 3, 3, 2, device=device, dtype=dtype)
         target = torch.rand(2, 3, 3, 2, device=device, dtype=dtype)

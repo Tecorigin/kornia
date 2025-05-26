@@ -16,7 +16,7 @@
 #
 
 import torch
-
+import pytest
 import kornia
 from kornia.geometry.bbox import (
     infer_bbox_shape,
@@ -65,6 +65,7 @@ class TestBbox2D(BaseTester):
         boxes = torch.tensor([[[1.0, 1.0], [3.0, 1.0], [3.0, 2.0], [1.0, 2.0]]], device=device, dtype=torch.float64)
         self.gradcheck(infer_bbox_shape, (boxes,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = infer_bbox_shape
@@ -180,6 +181,7 @@ class TestTransformBoxes2D(BaseTester):
 
         self.gradcheck(transform_bbox, (trans_mat, boxes, "xyxy", True))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         boxes = torch.tensor([[139.2640, 103.0150, 258.0480, 307.5075]], device=device, dtype=dtype)
         trans_mat = torch.tensor([[[-1.0, 0.0, 512.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]], device=device, dtype=dtype)
@@ -254,6 +256,7 @@ class TestBbox3D(BaseTester):
         )
         self.gradcheck(infer_bbox_shape3d, (boxes,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = infer_bbox_shape3d

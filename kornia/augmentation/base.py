@@ -249,6 +249,9 @@ class _BasicAugmentationBase(Module):
         batch_shape = in_tensor.shape
         if params is None:
             params = self.forward_parameters(batch_shape)
+            for k,v in params.items():
+                if isinstance(v, torch.Tensor):
+                    params[k] = v.to(in_tensor.device)
 
         if "batch_prob" not in params:
             params["batch_prob"] = tensor([True] * batch_shape[0])

@@ -205,6 +205,7 @@ class TestUpscaleDouble(BaseTester):
 
         assert tuple(actual.shape) == expected
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         img = self.prepare_data((1, 2, 5, 5), device, dtype)
         op = kornia.geometry.transform.upscale_double

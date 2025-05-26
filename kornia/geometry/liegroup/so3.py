@@ -145,7 +145,11 @@ class So3(Module):
                     [0., 0., 0.]], grad_fn=<WhereBackward0>)
 
         """
-        theta = batched_dot_product(self.q.vec, self.q.vec).sqrt()
+        if 'sdaa' in self.q.vec.device.type:
+            device = self.q.vec.device
+            theta = batched_dot_product(self.q.vec, self.q.vec).cpu().sqrt().to(device)
+        else:
+            theta = batched_dot_product(self.q.vec, self.q.vec).sqrt()
         # NOTE: this differs from https://github.com/strasdat/Sophus/blob/master/sympy/sophus/so3.py#L33
         omega = where(
             theta[..., None] != 0,

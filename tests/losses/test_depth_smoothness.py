@@ -63,6 +63,7 @@ class TestDepthSmoothnessLoss(BaseTester):
             )
         assert "idepth and image must be in the same dtype. Got:" in str(errinf)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         image = torch.rand(1, 2, 3, 4, device=device, dtype=dtype)
         depth = torch.rand(1, 2, 3, 4, device=device, dtype=dtype)

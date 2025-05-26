@@ -17,6 +17,7 @@
 
 """Module including useful metrics for Structure from Motion."""
 
+import torch
 from torch import Tensor
 
 from kornia.core.check import KORNIA_CHECK_IS_TENSOR
@@ -62,8 +63,14 @@ def sampson_epipolar_distance(
 
     # Instead we can just transpose F once and switch the order of multiplication
     F_t: Tensor = Fm.transpose(dim0=-2, dim1=-1)
-    line1_in_2: Tensor = pts1 @ F_t
-    line2_in_1: Tensor = pts2 @ Fm
+    # SDAA mm not support fp64
+    if 'sdaa' in F_t.device.type and F_t.dtype == torch.float64:
+        device = F_t.device
+        line1_in_2: Tensor = (pts1.cpu() @ F_t.cpu()).to(device)
+        line2_in_1: Tensor = (pts2.cpu() @ Fm.cpu()).to(device)
+    else:
+        line1_in_2: Tensor = pts1 @ F_t
+        line2_in_1: Tensor = pts2 @ Fm
 
     # numerator = (x'^T F x) ** 2
     numerator: Tensor = (pts2 * line1_in_2).sum(dim=-1).pow(2)
@@ -114,8 +121,14 @@ def symmetrical_epipolar_distance(
 
     # Instead we can just transpose F once and switch the order of multiplication
     F_t: Tensor = Fm.transpose(dim0=-2, dim1=-1)
-    line1_in_2: Tensor = pts1 @ F_t
-    line2_in_1: Tensor = pts2 @ Fm
+    # SDAA mm not support fp64
+    if 'sdaa' in F_t.device.type and F_t.dtype == torch.float64:
+        device = F_t.device
+        line1_in_2: Tensor = (pts1.cpu() @ F_t.cpu()).to(device)
+        line2_in_1: Tensor = (pts2.cpu() @ Fm.cpu()).to(device)
+    else:
+        line1_in_2: Tensor = pts1 @ F_t
+        line2_in_1: Tensor = pts2 @ Fm
 
     # numerator = (x'^T F x) ** 2
     numerator: Tensor = (pts2 * line1_in_2).sum(dim=-1).pow(2)
@@ -159,7 +172,12 @@ def left_to_right_epipolar_distance(pts1: Tensor, pts2: Tensor, Fm: Tensor) -> T
         pts1 = convert_points_to_homogeneous(pts1)
 
     F_t: Tensor = Fm.transpose(dim0=-2, dim1=-1)
-    line1_in_2: Tensor = pts1 @ F_t
+    # SDAA mm not support fp64
+    if 'sdaa' in F_t.device.type and F_t.dtype == torch.float64:
+        device = F_t.device
+        line1_in_2: Tensor = (pts1.cpu() @ F_t.cpu()).to(device)
+    else:
+        line1_in_2: Tensor = pts1 @ F_t
 
     return point_line_distance(pts2, line1_in_2)
 
@@ -192,6 +210,11 @@ def right_to_left_epipolar_distance(pts1: Tensor, pts2: Tensor, Fm: Tensor) -> T
     if pts2.shape[-1] == 2:
         pts2 = convert_points_to_homogeneous(pts2)
 
-    line2_in_1: Tensor = pts2 @ Fm
+    # SDAA mm not support fp64
+    if 'sdaa' in Fm.device.type and Fm.dtype == torch.float64:
+        device = Fm.device
+        line2_in_1: Tensor = (pts2.cpu() @ Fm.cpu()).to(device)
+    else:
+        line2_in_1: Tensor = pts2 @ Fm
 
     return point_line_distance(pts1, line2_in_1)

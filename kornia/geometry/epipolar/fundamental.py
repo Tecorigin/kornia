@@ -140,8 +140,14 @@ def run_7point(points1: Tensor, points2: Tensor) -> Tensor:
     f1_det = torch.linalg.det(f1)
     f2_det = torch.linalg.det(f2)
     coeffs[:, 0] = f1_det
-    coeffs[:, 1] = torch.einsum("bii->b", f2 @ safe_inverse_with_mask(f1)[0]) * f1_det
-    coeffs[:, 2] = torch.einsum("bii->b", f1 @ safe_inverse_with_mask(f2)[0]) * f2_det
+    # SDAA not support fp64
+    if 'sdaa' in f2.device.type and f2.dtype == torch.float64:
+        device = f2.device
+        coeffs[:, 1] = torch.einsum("bii->b", (f2.cpu() @ safe_inverse_with_mask(f1)[0].cpu()).to(device)) * f1_det
+        coeffs[:, 2] = torch.einsum("bii->b", (f1.cpu() @ safe_inverse_with_mask(f2)[0].cpu()).to(device)) * f2_det
+    else:
+        coeffs[:, 1] = torch.einsum("bii->b", f2 @ safe_inverse_with_mask(f1)[0]) * f1_det
+        coeffs[:, 2] = torch.einsum("bii->b", f1 @ safe_inverse_with_mask(f2)[0]) * f2_det
     coeffs[:, 3] = f2_det
 
     # solve the cubic equation, there can be 1 to 3 roots
@@ -173,8 +179,16 @@ def run_7point(points1: Tensor, points2: Tensor) -> Tensor:
 
     mat_ind = zeros(3, 3, dtype=torch.bool)
     mat_ind[2, 2] = True
-    fmatrix[_s_non_zero_mask, mat_ind] = 1.0
-    fmatrix[~_s_non_zero_mask, mat_ind] = 0.0
+    # SDAA bug
+    if 'sdaa' in fmatrix.device.type:
+        device = fmatrix.device
+        fmatrix = fmatrix.cpu()
+        fmatrix[_s_non_zero_mask.cpu(), mat_ind.cpu()] = 1.0
+        fmatrix[~_s_non_zero_mask.cpu(), mat_ind.cpu()] = 0.0
+        fmatrix = fmatrix.to(device)
+    else:
+        fmatrix[_s_non_zero_mask, mat_ind] = 1.0
+        fmatrix[~_s_non_zero_mask, mat_ind] = 0.0
 
     trans1_exp = transform1[valid_root_mask].unsqueeze(1).expand(-1, fmatrix.shape[2], -1, -1)
     trans2_exp = transform2[valid_root_mask].unsqueeze(1).expand(-1, fmatrix.shape[2], -1, -1)
@@ -225,11 +239,16 @@ def run_8point(points1: Tensor, points2: Tensor, weights: Optional[Tensor] = Non
     X = torch.cat([x2 * x1, x2 * y1, x2, y2 * x1, y2 * y1, y2, x1, y1, ones], dim=-1)  # BxNx9
 
     # apply the weights to the linear system
+    # SDAA not support fp64
+    device = X.device
+    if 'sdaa' in X.device.type and X.dtype == torch.float64:
+        X = X.cpu()
     if weights is None:
         X = X.transpose(-2, -1) @ X
     else:
-        w_diag = torch.diag_embed(weights)
+        w_diag = torch.diag_embed(weights).to(X.device)
         X = X.transpose(-2, -1) @ w_diag @ X
+    X = X.to(device)
     # compute eigevectors and retrieve the one with the smallest eigenvalue
 
     _, _, V = _torch_svd_cast(X)
@@ -239,8 +258,12 @@ def run_8point(points1: Tensor, points2: Tensor, weights: Optional[Tensor] = Non
     U, S, V = _torch_svd_cast(F_mat)
     rank_mask = torch.tensor([1.0, 1.0, 0.0], device=F_mat.device, dtype=F_mat.dtype)
 
-    F_projected = U @ (torch.diag_embed(S * rank_mask) @ V.transpose(-2, -1))
-    F_est = transform2.transpose(-2, -1) @ (F_projected @ transform1)
+    if 'sdaa' in U.device.type and U.dtype == torch.float64:
+        F_projected = (U.cpu() @ (torch.diag_embed(S * rank_mask).cpu() @ V.transpose(-2, -1).cpu())).to(device)
+        F_est = (transform2.transpose(-2, -1).cpu() @ (F_projected.cpu() @ transform1.cpu())).to(device)
+    else:
+        F_projected = U @ (torch.diag_embed(S * rank_mask) @ V.transpose(-2, -1))
+        F_est = transform2.transpose(-2, -1) @ (F_projected @ transform1)
 
     return normalize_transformation(F_est)
 
@@ -295,7 +318,13 @@ def compute_correspond_epilines(points: Tensor, F_mat: Tensor) -> Tensor:
     KORNIA_CHECK_SHAPE(F_mat, ["*", "3", "3"])
     # project points and retrieve lines components
     points_h = torch.transpose(points_h, dim0=-2, dim1=-1)
-    a, b, c = torch.chunk(F_mat @ points_h, dim=-2, chunks=3)
+    # SDAA not support fp64
+    if 'sdaa' in F_mat.device.type and F_mat.dtype == torch.float64:
+        device = F_mat.device
+        a, b, c = torch.chunk(F_mat.cpu() @ points_h.cpu(), dim=-2, chunks=3)
+        a, b, c = a.to(device), b.to(device), c.to(device)
+    else:
+        a, b, c = torch.chunk(F_mat @ points_h, dim=-2, chunks=3)
 
     # compute normal and compose equation line
     nu: Tensor = a * a + b * b
@@ -379,7 +408,12 @@ def fundamental_from_essential(E_mat: Tensor, K1: Tensor, K2: Tensor) -> Tensor:
     if not len(E_mat.shape[:-2]) == len(K1.shape[:-2]) == len(K2.shape[:-2]):
         raise AssertionError
 
-    return (safe_inverse_with_mask(K2)[0]).transpose(-2, -1) @ E_mat @ (safe_inverse_with_mask(K1)[0])
+    # SDAA not support fp64
+    if 'sdaa' in K2.device.type and K2.dtype == torch.float64:
+        device = K2.device
+        return ((safe_inverse_with_mask(K2)[0]).transpose(-2, -1).cpu() @ E_mat.cpu() @ (safe_inverse_with_mask(K1)[0]).cpu()).to(device)
+    else:
+        return (safe_inverse_with_mask(K2)[0]).transpose(-2, -1) @ E_mat @ (safe_inverse_with_mask(K1)[0])
 
 
 # adapted from:

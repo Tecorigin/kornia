@@ -21,6 +21,7 @@ from kornia.core import Tensor
 from kornia.core.check import KORNIA_CHECK_SHAPE
 from kornia.geometry.camera.distortion_affine import distort_points_affine
 
+import torch
 
 def _distort_points_kannala_brandt_impl(
     projected_points_in_camera_z1_plane: Tensor,
@@ -170,7 +171,12 @@ def undistort_points_kannala_brandt(distorted_points_in_camera: Tensor, params: 
         if iters >= 20:
             break
 
-    radius_undistorted = th.tan()
+    # SDAA not support tan fp64
+    if 'sdaa' in th.device.type and th.dtype == torch.float64:
+        device = th.device
+        radius_undistorted = th.cpu().tan().to(device)
+    else:
+        radius_undistorted = th.tan()
 
     undistorted_points = ops.where(
         radius_undistorted[..., None] < 0.0,

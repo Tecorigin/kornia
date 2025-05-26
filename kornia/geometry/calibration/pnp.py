@@ -208,8 +208,14 @@ def solve_pnp_dlt(
     solution_4x4[:, :3, :] = solution
 
     # De-normalizing the solution
-    intermediate = torch.bmm(solution_4x4, world_transform_norm)
-    solution = torch.bmm(inv_img_transform_norm, intermediate[:, :3, :])
+    # SDAA bmm not support fp64
+    if 'sdaa' in solution_4x4.device.type and solution_4x4.dtype == torch.float64:
+        device = solution_4x4.device
+        intermediate = torch.bmm(solution_4x4.cpu(), world_transform_norm.cpu()).to(device)
+        solution = torch.bmm(inv_img_transform_norm.cpu(), intermediate[:, :3, :].cpu()).to(device)
+    else:
+        intermediate = torch.bmm(solution_4x4, world_transform_norm)
+        solution = torch.bmm(inv_img_transform_norm, intermediate[:, :3, :])
 
     # We obtained one solution for each element of the batch. We may
     # need to multiply each solution with a scalar. This is because
@@ -242,8 +248,14 @@ def solve_pnp_dlt(
     # the column ortho[i, :, j]. The below code performs the necessary
     # operations in a better way.
     mask = eye_like(3, ortho)
-    col_sign_fix = torch.sign(mask * right)
-    rot_mat = torch.bmm(ortho, col_sign_fix)
+    # SDAA bmm not support fp64
+    if 'sdaa' in ortho.device.type and ortho.dtype == torch.float64:
+        device = ortho.device
+        col_sign_fix = torch.sign(mask.cpu() * right.cpu()).to(device)
+        rot_mat = torch.bmm(ortho.cpu(), col_sign_fix.cpu()).to(device)
+    else:
+        col_sign_fix = torch.sign(mask * right)
+        rot_mat = torch.bmm(ortho, col_sign_fix)
 
     # Preparing the final output.
     pred_world_to_cam = torch.cat([rot_mat, temp[:, :3, 3:4]], dim=-1)

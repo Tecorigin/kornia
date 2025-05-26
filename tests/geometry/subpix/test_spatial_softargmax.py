@@ -22,7 +22,7 @@ import kornia
 from kornia.geometry.subpix.spatial_soft_argmax import _get_center_kernel2d, _get_center_kernel3d
 
 from testing.base import BaseTester
-
+import pytest
 
 class TestCenterKernel2d(BaseTester):
     def test_smoke(self, device, dtype):
@@ -169,6 +169,7 @@ class TestSpatialSoftArgmax2d(BaseTester):
         loss = (loss1 + loss2).mean()
         loss.backward()
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         data = torch.rand((2, 3, 7, 7), dtype=dtype, device=device)
         op = kornia.geometry.subpix.spatial_soft_argmax2d

@@ -105,6 +105,7 @@ class TestApplyColorMap(BaseTester):
 
         self.gradcheck(apply_colormap, (input_tensor, cm))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         op = apply_colormap
         op_script = torch_optimizer(op)

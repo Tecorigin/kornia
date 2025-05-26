@@ -28,9 +28,16 @@ from kornia.core import Tensor
 def _kl_div_2d(p: Tensor, q: Tensor) -> Tensor:
     # D_KL(P || Q)
     batch, chans, height, width = p.shape
-    unsummed_kl = F.kl_div(
-        q.reshape(batch * chans, height * width).log(), p.reshape(batch * chans, height * width), reduction="none"
-    )
+    # SDAA not support kl_div
+    if 'sdaa' in q.device.type:
+        device = q.device
+        unsummed_kl = F.kl_div(
+            q.reshape(batch * chans, height * width).log().cpu(), p.reshape(batch * chans, height * width).cpu(), reduction="none"
+        ).to(device)
+    else:
+        unsummed_kl = F.kl_div(
+            q.reshape(batch * chans, height * width).log(), p.reshape(batch * chans, height * width), reduction="none"
+        )
     kl_values = unsummed_kl.sum(-1).view(batch, chans)
     return kl_values
 

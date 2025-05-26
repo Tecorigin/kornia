@@ -247,6 +247,7 @@ class TestRotationMatrixToQuaternion(BaseTester):
         # evaluate function gradient
         self.gradcheck(partial(kornia.geometry.conversions.rotation_matrix_to_quaternion, eps=eps), (matrix,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         quaternion = torch.tensor((0.0, 0.0, 1.0), device=device, dtype=dtype)
         op = kornia.geometry.conversions.quaternion_log_to_exp
@@ -294,6 +295,7 @@ class TestQuaternionToRotationMatrix(BaseTester):
         # evaluate function gradient
         self.gradcheck(partial(kornia.geometry.conversions.quaternion_to_rotation_matrix), (quaternion,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         quaternion = torch.tensor((0.0, 0.0, 1.0, 0.0), device=device, dtype=dtype)
         op = kornia.geometry.conversions.quaternion_to_rotation_matrix
@@ -358,6 +360,7 @@ class TestQuaternionLogToExp(BaseTester):
         # evaluate function gradient
         self.gradcheck(partial(kornia.geometry.conversions.quaternion_log_to_exp, eps=eps), (quaternion,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         quaternion = torch.tensor((0.0, 0.0, 1.0), device=device, dtype=dtype)
         op = kornia.geometry.conversions.quaternion_log_to_exp
@@ -419,6 +422,7 @@ class TestQuaternionExpToLog(BaseTester):
         # evaluate function gradient
         self.gradcheck(partial(kornia.geometry.conversions.quaternion_exp_to_log, eps=eps), (quaternion,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         quaternion = torch.tensor((0.0, 0.0, 1.0, 0.0), device=device, dtype=dtype)
         op = kornia.geometry.conversions.quaternion_exp_to_log
@@ -653,6 +657,7 @@ class TestConvertPointsToHomogeneous(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.conversions.convert_points_to_homogeneous, (points_h,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_h = torch.zeros(1, 2, 3, device=device, dtype=dtype)
 
@@ -685,6 +690,7 @@ class TestConvertAtoH(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.conversions.convert_affinematrix_to_homography, (points_h,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_h = torch.zeros(1, 2, 3, device=device, dtype=dtype)
 
@@ -744,6 +750,7 @@ class TestConvertPointsFromHomogeneous(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.conversions.convert_points_from_homogeneous, (points_h,))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_h = torch.zeros(1, 2, 3, device=device, dtype=dtype)
 
@@ -785,6 +792,7 @@ class TestNormalizePixelCoordinates(BaseTester):
 
         self.assert_close(grid_norm, expected, atol=atol, rtol=rtol)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         if device == torch.device("cpu"):
             pytest.skip("NormalizePixelCoordinates not working on CPU with dynamo!")
@@ -828,6 +836,7 @@ class TestDenormalizePixelCoordinates(BaseTester):
 
         self.assert_close(grid_norm, expected, atol=1e-4, rtol=1e-4)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         if device == torch.device("cpu"):
             pytest.xfail("DenormalizePixelCoordinates not working on CPU with dynamo!")
@@ -881,6 +890,7 @@ class TestProjectPoints(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.camera.project_points, (points_3d, camera_matrix))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_3d = torch.zeros(1, 3, device=device, dtype=dtype)
         camera_matrix = torch.eye(3, device=device, dtype=dtype).expand(1, -1, -1)
@@ -928,6 +938,7 @@ class TestDenormalizePointsWithIntrinsics(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.conversions.denormalize_points_with_intrinsics, (points_2d, camera_matrix))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_2d = torch.zeros(1, 2, device=device, dtype=dtype)
         camera_matrix = torch.eye(3, device=device, dtype=dtype).expand(1, -1, -1)
@@ -987,6 +998,7 @@ class TestNormalizePointsWithIntrinsics(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.conversions.normalize_points_with_intrinsics, (points_2d, camera_matrix))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points_2d = torch.zeros(1, 2, device=device, dtype=dtype)
         camera_matrix = torch.eye(3, device=device, dtype=dtype).expand(1, -1, -1)
@@ -1140,10 +1152,11 @@ class TestEulerFromQuaternion(BaseTester):
         q = Quaternion.random(batch_size=1).to(device, torch.float64)
         self.gradcheck(euler_from_quaternion, (q.w, q.x, q.y, q.z))
 
-    @pytest.mark.skipif(
-        torch_version() in {"2.0.1", "2.1.2", "2.2.2", "2.3.1"} and sys.version_info.minor == 8,
-        reason="Not working on 2.0",
-    )
+    # @pytest.mark.skipif(
+    #     torch_version() in {"2.0.1", "2.1.2", "2.2.2", "2.3.1"} and sys.version_info.minor == 8,
+    #     reason="Not working on 2.0",
+    # )
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         q = Quaternion.random(batch_size=1)
         q = q.to(device, dtype)
@@ -1189,6 +1202,7 @@ class TestQuaternionFromEuler(BaseTester):
         roll, pitch, yaw = torch.rand(3, 2, device=device, dtype=torch.float64, requires_grad=True)
         self.gradcheck(quaternion_from_euler, (roll, pitch, yaw))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         roll, pitch, yaw = torch.rand(3, 2, device=device, dtype=dtype)
 

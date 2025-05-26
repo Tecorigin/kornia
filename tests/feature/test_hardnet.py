@@ -39,6 +39,7 @@ class TestHardNet(BaseTester):
         out = hardnet(inp)
         assert out.shape == (16, 128)
 
+    @pytest.mark.skip(reason="SDAA batch_norm not support fp64")
     def test_gradcheck(self, device):
         patches = torch.rand(2, 1, 32, 32, device=device, dtype=torch.float64)
         hardnet = HardNet().to(patches.device, patches.dtype)

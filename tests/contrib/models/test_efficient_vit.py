@@ -67,7 +67,8 @@ class TestEfficientViT:
 
         model_path = tmp_path / "efficientvit_backbone_b0.onnx"
 
-        torch.onnx.export(model, image, model_path, opset_version=16)
+        with torch.no_grad():
+            torch.onnx.export(model, image, model_path, opset_version=16)
 
         assert model_path.is_file()
 

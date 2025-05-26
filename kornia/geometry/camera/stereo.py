@@ -204,6 +204,10 @@ class StereoCamera:
             Tensor of shape :math:`(B)`
 
         """
+        # SDAA prec bug 10. / 1. = 9.999999046325684
+        if 'sdaa' in self.fx.device.type:
+            device = self.fx.device
+            return (-self.rectified_right_camera[..., 0, 3].cpu() / self.fx.cpu()).to(device)
         return -self.rectified_right_camera[..., 0, 3] / self.fx
 
     @property

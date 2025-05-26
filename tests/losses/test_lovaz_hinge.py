@@ -71,6 +71,7 @@ class TestLovaszHingeLoss(BaseTester):
 
         self.gradcheck(kornia.losses.lovasz_hinge_loss, (logits, labels))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         num_classes = 1
         logits = torch.rand(2, num_classes, 1, 2, device=device, dtype=dtype)

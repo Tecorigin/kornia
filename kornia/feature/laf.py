@@ -105,7 +105,12 @@ def rotate_laf(LAF: Tensor, angles_degrees: Tensor) -> Tensor:
     B, N = LAF.shape[:2]
     rotmat = angle_to_rotation_matrix(angles_degrees).view(B * N, 2, 2)
     out_laf = LAF.clone()
-    out_laf[:, :, :2, :2] = torch.bmm(LAF[:, :, :2, :2].reshape(B * N, 2, 2), rotmat).reshape(B, N, 2, 2)
+    # SDAA torch.bmm not support fp64
+    if LAF.dtype == torch.float64 and 'sdaa' in LAF.device.type:
+        device = LAF.device
+        out_laf[:, :, :2, :2] = torch.bmm(LAF[:, :, :2, :2].reshape(B * N, 2, 2).cpu(), rotmat.cpu()).to(device).reshape(B, N, 2, 2)
+    else:
+        out_laf[:, :, :2, :2] = torch.bmm(LAF[:, :, :2, :2].reshape(B * N, 2, 2).contiguous(), rotmat).reshape(B, N, 2, 2)
     return out_laf
 
 
@@ -283,7 +288,12 @@ def laf_to_boundary_points(LAF: Tensor, n_pts: int = 50) -> Tensor:
     pts = pts.to(LAF.device).to(LAF.dtype)
     aux = tensor([0.0, 0.0, 1.0]).view(1, 1, 3).expand(B * N, 1, 3)
     HLAF = concatenate([LAF.view(-1, 2, 3), aux.to(LAF.device).to(LAF.dtype)], dim=1)
-    pts_h = torch.bmm(HLAF, pts.permute(0, 2, 1)).permute(0, 2, 1)
+    # SDAA torch.bmm not support fp64
+    if pts.dtype == torch.float64 and 'sdaa' in pts.device.type:
+        device = pts.device
+        pts_h = torch.bmm(HLAF.cpu(), pts.permute(0, 2, 1).cpu()).permute(0, 2, 1).to(device)
+    else:
+        pts_h = torch.bmm(HLAF, pts.permute(0, 2, 1)).permute(0, 2, 1)
     return convert_points_from_homogeneous(pts_h.view(B, N, n_pts, 3))
 
 
@@ -509,7 +519,9 @@ def laf_is_inside_image(laf: Tensor, images: Tensor, border: int = 0) -> Tensor:
     good_lafs_mask = (
         (pts[..., 0] >= border) * (pts[..., 0] <= w - border) * (pts[..., 1] >= border) * (pts[..., 1] <= h - border)
     )
-    good_lafs_mask = good_lafs_mask.min(dim=2)[0]
+    # SDAA argmin not implemented for 'Bool'
+    device = good_lafs_mask.device
+    good_lafs_mask = good_lafs_mask.cpu().min(dim=2)[0].to(device)
     return good_lafs_mask
 
 

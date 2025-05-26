@@ -166,7 +166,13 @@ def match_snn(desc1: Tensor, desc2: Tensor, th: float = 0.8, dm: Optional[Tensor
     if desc2.shape[0] < 2:  # We cannot perform snn check, so output empty matches
         return _no_match(desc1)
     distance_matrix = _get_lazy_distance_matrix(desc1, desc2, dm)
-    vals, idxs_in_2 = torch.topk(distance_matrix, 2, dim=1, largest=False)
+    # SDAA not support input shape <= 0
+    if len(distance_matrix) == 0:
+        device = distance_matrix.device
+        vals, idxs_in_2 = torch.topk(distance_matrix.cpu(), 2, dim=1, largest=False)
+        vals, idxs_in_2 = vals.to(device), idxs_in_2.to(device)
+    else:
+        vals, idxs_in_2 = torch.topk(distance_matrix, 2, dim=1, largest=False)
     ratio = vals[:, 0] / vals[:, 1]
     mask = ratio <= th
     match_dists = ratio[mask]

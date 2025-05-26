@@ -477,7 +477,12 @@ class Whitening(nn.Module):
             raise ValueError(f"Invalid input shape, we expect NxD. Got: {x.shape}")
         x = x - self.mean  # Center the data.
         x = x @ self.evecs  # Apply rotation and/or scaling.
-        x = torch.sign(x) * torch.pow(torch.abs(x), self.pval)  # Powerlaw.
+        # SDAA torch.sign not support fp64
+        if x.dtype == torch.float64 and 'sdaa' in x.device.type:
+            device = x.device
+            x = torch.sign(x.cpu()).to(device) * torch.pow(torch.abs(x), self.pval)  # Powerlaw.
+        else:
+            x = torch.sign(x) * torch.pow(torch.abs(x), self.pval)  # Powerlaw.
         return F.normalize(x, dim=1)
 
     def __repr__(self) -> str:

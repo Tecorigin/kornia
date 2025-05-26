@@ -86,6 +86,7 @@ class TestCropAndResize3D(BaseTester):
 
         self.gradcheck(kornia.geometry.transform.crop_and_resize3d, (img, boxes, (4, 3, 2)))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = kornia.geometry.transform.crop_and_resize3d
@@ -141,13 +142,14 @@ class TestCenterCrop3D(BaseTester):
 
         self.gradcheck(kornia.geometry.transform.center_crop3d, (img, (3, 5, 7)))
 
-    @pytest.mark.skipif(
-        torch_version() == "2.1.0",
-        reason=(
-            "https://github.com/pytorch/pytorch/issues/110680"
-            " -  unsupported operand type(s) for @: 'FakeTensor' and 'FakeTensor' on `normalize_homography3d`"
-        ),
-    )
+    # @pytest.mark.skipif(
+    #     torch_version() == "2.1.0",
+    #     reason=(
+    #         "https://github.com/pytorch/pytorch/issues/110680"
+    #         " -  unsupported operand type(s) for @: 'FakeTensor' and 'FakeTensor' on `normalize_homography3d`"
+    #     ),
+    # )
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = kornia.geometry.transform.center_crop3d
@@ -244,6 +246,7 @@ class TestCropByBoxes3D(BaseTester):
         patches = kornia.geometry.transform.crop_by_boxes3d(inp, src_box, dst_box, align_corners=True)
         self.assert_close(patches, expected, rtol=1e-4, atol=1e-4)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = kornia.geometry.transform.crop_by_boxes3d

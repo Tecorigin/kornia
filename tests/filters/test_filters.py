@@ -372,8 +372,9 @@ class TestFilter2D(BaseTester):
     @pytest.mark.skip(reason="filter2d do not have a module")
     def test_module(self): ...
 
-    @pytest.mark.parametrize("normalized", [True, False])
-    @pytest.mark.parametrize("padding", ["same", "valid"])
+    # @pytest.mark.parametrize("normalized", [True, False])
+    # @pytest.mark.parametrize("padding", ["same", "valid"])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, normalized, padding, device, dtype, torch_optimizer):
         kernel = torch.rand(1, 3, 3, device=device, dtype=dtype)
         data = torch.ones(2, 3, 10, 10, device=device, dtype=dtype)
@@ -729,7 +730,8 @@ class TestFilter3D(BaseTester):
     @pytest.mark.skip(reason="filter3d do not have a module")
     def test_module(self): ...
 
-    @pytest.mark.parametrize("normalized", [True, False])
+    # @pytest.mark.parametrize("normalized", [True, False])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, normalized, device, dtype, torch_optimizer):
         kernel = torch.rand(1, 3, 3, 3, device=device, dtype=dtype)
         data = torch.ones(2, 3, 4, 10, 10, device=device, dtype=dtype)
@@ -771,7 +773,8 @@ class TestDexiNed(BaseTester):
         out = model(img)
         self.assert_close(out, expect, atol=3e-4, rtol=3e-4)
 
-    @pytest.mark.skip(reason="DexiNed do not compile with dynamo.")
+    # @pytest.mark.skip(reason="DexiNed do not compile with dynamo.")
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # TODO: update the dexined to be possible to use with dynamo
         data = torch.rand(2, 3, 32, 32, device=device, dtype=dtype)

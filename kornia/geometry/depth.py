@@ -254,7 +254,11 @@ def depth_from_plane_equation(
     denom = torch.sum(rays * plane_normals_exp, dim=-1)  # (B, N)
     denom_abs = torch.abs(denom)
     zero_mask = denom_abs < eps
-    denom = torch.where(zero_mask, eps * torch.sign(denom), denom)
+    if 'sdaa' in denom.device.type:
+        device = denom.device
+        denom = torch.where(zero_mask, eps * torch.sign(denom.cpu()).to(device), denom)
+    else:
+        denom = torch.where(zero_mask, eps * torch.sign(denom), denom)
 
     # Compute depth from plane equation
     depth = plane_offsets / denom  # plane_offsets: (B, 1), denom: (B, N) -> depth: (B, N)

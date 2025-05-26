@@ -126,7 +126,12 @@ def projection_from_KRt(K: Tensor, R: Tensor, t: Tensor) -> Tensor:
     K_h = pad(K, [0, 1, 0, 1], "constant", 0.0)  # 4x4
     K_h[..., -1, -1] += 1.0
 
-    return K @ Rt
+    # SDAA not support fp16
+    if 'sdaa' in K.device.type and K.dtype == torch.float64:
+        device = K.device
+        return (K.cpu() @ Rt.cpu()).to(device)
+    else:
+        return K @ Rt
 
 
 def KRt_from_projection(P: Tensor, eps: float = 1e-6) -> Tuple[Tensor, Tensor, Tensor]:
@@ -148,19 +153,36 @@ def KRt_from_projection(P: Tensor, eps: float = 1e-6) -> Tuple[Tensor, Tensor, T
 
     # Trick to turn QR-decomposition into RQ-decomposition
     reverse = torch.tensor([[0, 0, 1], [0, 1, 0], [1, 0, 0]], device=P.device, dtype=P.dtype).unsqueeze(0)
-    submat_3x3 = torch.matmul(reverse, submat_3x3).permute(0, 2, 1)
-    ortho_mat, upper_mat = linalg_qr(submat_3x3)
-    ortho_mat = torch.matmul(reverse, ortho_mat.permute(0, 2, 1))
-    upper_mat = torch.matmul(reverse, torch.matmul(upper_mat.permute(0, 2, 1), reverse))
+
+    # SDAA matmul not support fp64
+    device = reverse.device
+    if 'sdaa' in device.type and reverse.dtype == torch.float64:
+        submat_3x3 = torch.matmul(reverse.cpu(), submat_3x3.cpu()).to(device).permute(0, 2, 1)
+        ortho_mat, upper_mat = linalg_qr(submat_3x3)
+        ortho_mat = torch.matmul(reverse.cpu(), ortho_mat.permute(0, 2, 1).cpu()).to(device)
+        upper_mat = torch.matmul(reverse.cpu(), torch.matmul(upper_mat.permute(0, 2, 1).cpu(), reverse.cpu())).to(device)
+    else:
+        submat_3x3 = torch.matmul(reverse, submat_3x3).permute(0, 2, 1)
+        ortho_mat, upper_mat = linalg_qr(submat_3x3)
+        ortho_mat = torch.matmul(reverse, ortho_mat.permute(0, 2, 1))
+        upper_mat = torch.matmul(reverse, torch.matmul(upper_mat.permute(0, 2, 1), reverse))
 
     # Turning the `upper_mat's` diagonal elements to positive.
     diagonals = torch.diagonal(upper_mat, dim1=-2, dim2=-1) + eps
-    signs = torch.sign(diagonals)
+    if 'sdaa' in device.type:
+        signs = torch.sign(diagonals.cpu()).to(device)
+    else:
+        signs = torch.sign(diagonals)
     signs_mat = torch.diag_embed(signs)
 
-    K = torch.matmul(upper_mat, signs_mat)
-    R = torch.matmul(signs_mat, ortho_mat)
-    t = torch.matmul(torch.inverse(K), last_column)
+    if 'sdaa' in device.type and upper_mat.dtype == torch.float64:
+        K = torch.matmul(upper_mat.cpu(), signs_mat.cpu()).to(device)
+        R = torch.matmul(signs_mat.cpu(), ortho_mat.cpu()).to(device)
+        t = torch.matmul(torch.inverse(K).cpu(), last_column.cpu()).to(device)
+    else:
+        K = torch.matmul(upper_mat, signs_mat)
+        R = torch.matmul(signs_mat, ortho_mat)
+        t = torch.matmul(torch.inverse(K), last_column)
 
     return K, R, t
 
@@ -213,7 +235,12 @@ def projections_from_fundamental(F_mat: Tensor) -> Tensor:
 
     _, e2 = _nullspace(Ft_mat)
 
-    R2 = cross_product_matrix(e2) @ F_mat  # Bx3x3
+    # SDAA not support fp64
+    if 'sdaa' in e2.device.type and e2.dtype == torch.float64:
+        device = e2.device
+        R2 = (cross_product_matrix(e2.cpu()) @ F_mat.cpu()).to(device)  # Bx3x3
+    else:
+        R2 = cross_product_matrix(e2) @ F_mat  # Bx3x3
     t2 = e2[..., :, None]  # Bx3x1
 
     P1 = torch.cat([R1, t1], dim=-1)  # Bx3x4

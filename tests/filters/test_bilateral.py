@@ -92,8 +92,9 @@ class TestBilateralBlur(BaseTester):
         op_module = BilateralBlur(*params)
         self.assert_close(op_module(img), op(img, *params))
 
-    @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
-    @pytest.mark.parametrize("color_distance_type", ["l1", "l2"])
+    # @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
+    # @pytest.mark.parametrize("color_distance_type", ["l1", "l2"])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, kernel_size, color_distance_type, device, dtype, torch_optimizer):
         data = torch.ones(2, 3, 8, 8, device=device, dtype=dtype)
         op = BilateralBlur(kernel_size, 1, (1, 1), color_distance_type=color_distance_type)
@@ -251,8 +252,9 @@ class TestJointBilateralBlur(BaseTester):
         op_module = JointBilateralBlur(*params)
         self.assert_close(op_module(img, guide), op(img, guide, *params))
 
-    @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
-    @pytest.mark.parametrize("color_distance_type", ["l1", "l2"])
+    # @pytest.mark.parametrize("kernel_size", [5, (5, 7)])
+    # @pytest.mark.parametrize("color_distance_type", ["l1", "l2"])
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, kernel_size, color_distance_type, device, dtype, torch_optimizer):
         data = torch.rand(2, 3, 8, 8, device=device, dtype=dtype)
         guide = torch.rand(2, 3, 8, 8, device=device, dtype=dtype)

@@ -192,7 +192,8 @@ def blur_pool2d(input: Tensor, kernel_size: tuple[int, int] | int, stride: int =
     kernel = get_pascal_kernel_2d(kernel_size, norm=True, device=input.device, dtype=input.dtype).repeat(
         (input.size(1), 1, 1, 1)
     )
-    return _blur_pool_by_kernel2d(input, kernel, stride)
+    # SDAA contiguous bug
+    return _blur_pool_by_kernel2d(input, kernel, stride).contiguous()
 
 
 def max_blur_pool2d(
@@ -229,7 +230,8 @@ def max_blur_pool2d(
     kernel = get_pascal_kernel_2d(kernel_size, norm=True, device=input.device, dtype=input.dtype).repeat(
         (input.shape[1], 1, 1, 1)
     )
-    return _max_blur_pool_by_kernel2d(input, kernel, stride, max_pool_size, ceil_mode)
+    # SDAA contiguous bug
+    return _max_blur_pool_by_kernel2d(input, kernel, stride, max_pool_size, ceil_mode).contiguous()
 
 
 def _blur_pool_by_kernel2d(input: Tensor, kernel: Tensor, stride: int) -> Tensor:

@@ -364,7 +364,7 @@ class TestDrawRectangle:
         random_background = torch.rand(batch, 3, h, w, device=device)
         random_w_rectangle = random_background.clone()
 
-        draw_rectangle(random_w_rectangle, points, color=torch.tensor([1.0, 1.0, 1.0]), fill=fill)
+        random_w_rectangle = draw_rectangle(random_w_rectangle, points, color=torch.tensor([1.0, 1.0, 1.0], device=device), fill=fill)
 
         for b in range(batch):
             for n in range(N):

@@ -92,6 +92,7 @@ class TestTverskyLoss(BaseTester):
             kornia.losses.tversky_loss, (logits, labels, alpha, beta), dtypes=[torch.float64, torch.int64, None, None]
         )
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         num_classes = 3
         params = (0.5, 0.05)

@@ -67,7 +67,7 @@ def _guided_blur_grayscale_guidance(
         cov_Ip = corr_Ip - mean_I * mean_p
 
     if isinstance(eps, Tensor):
-        eps = eps.view(-1, 1, 1, 1)  # N -> NCHW
+        eps = eps.reshape(-1, 1, 1, 1)  # N -> NCHW
 
     a = cov_Ip / (var_I + eps)
     b = mean_p - a * mean_I
@@ -90,6 +90,7 @@ def _guided_blur_multichannel_guidance(
     border_type: str = "reflect",
     subsample: int = 1,
 ) -> Tensor:
+    device = guidance.device
     guidance_sub, input_sub, kernel_size = _preprocess_fast_guided_blur(guidance, input, kernel_size, subsample)
     B, C, H, W = guidance_sub.shape
 
@@ -113,7 +114,10 @@ def _guided_blur_multichannel_guidance(
     else:
         _eps = guidance.new_full((C,), eps).diag().view(1, 1, 1, C, C)
     a = torch.linalg.solve(var_I + _eps, cov_Ip)  # B, H, W, C_guidance, C_input
-    b = mean_p - (mean_I.unsqueeze(-2) @ a).squeeze(-2)  # B, H, W, C_input
+    if 'sdaa' in device.type and a.dtype == torch.float64:
+        b = mean_p - (mean_I.unsqueeze(-2).cpu() @ a.cpu()).to(device).squeeze(-2)  # B, H, W, C_input
+    else:
+        b = mean_p - (mean_I.unsqueeze(-2) @ a).squeeze(-2)  # B, H, W, C_input
 
     mean_a = box_blur(a.flatten(-2).permute(0, 3, 1, 2), kernel_size, border_type)
     mean_b = box_blur(b.permute(0, 3, 1, 2), kernel_size, border_type)
@@ -124,7 +128,10 @@ def _guided_blur_multichannel_guidance(
     mean_a = mean_a.view(B, C, -1, H * subsample, W * subsample)
 
     # einsum might not be contiguous, thus mean_b is the first argument
-    return mean_b + torch.einsum("BCHW,BCcHW->BcHW", guidance, mean_a)
+    if 'sdaa' in device.type and guidance.dtype == torch.float64:
+        return mean_b + torch.einsum("BCHW,BCcHW->BcHW", guidance.cpu(), mean_a.cpu()).to(device)
+    else:
+        return mean_b + torch.einsum("BCHW,BCcHW->BcHW", guidance, mean_a)
 
 
 def guided_blur(

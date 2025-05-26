@@ -628,7 +628,11 @@ def resize(
 
         input = gaussian_blur2d(input, ks, sigmas)
 
-    output = torch.nn.functional.interpolate(input, size=size, mode=interpolation, align_corners=align_corners)
+    if 'sdaa' in input.device.type:
+        device = input.device
+        output = torch.nn.functional.interpolate(input.cpu(), size=size, mode=interpolation, align_corners=align_corners).to(device)
+    else:
+        output = torch.nn.functional.interpolate(input, size=size, mode=interpolation, align_corners=align_corners)
     return output
 
 

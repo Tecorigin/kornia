@@ -51,6 +51,11 @@ def get_test_devices() -> dict[str, torch.device]:
     devices["cpu"] = torch.device("cpu")
     if torch.cuda.is_available():
         devices["cuda"] = torch.device("cuda:0")
+    try:
+        if torch.sdaa.is_available():
+            devices["sdaa"] = torch.device("sdaa:0")
+    except:
+        pass
     if kornia.xla_is_available():
         import torch_xla.core.xla_model as xm
 

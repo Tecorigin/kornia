@@ -37,7 +37,12 @@ def _pair_square_euclidean(tensor1: torch.Tensor, tensor2: torch.Tensor) -> torc
     # ||t1-t2||^2 = (t1-t2)^T(t1-t2) = t1^T*t1 + t2^T*t2 - 2*t1^T*t2
     t1_sq: torch.Tensor = tensor1.mul(tensor1).sum(dim=-1, keepdim=True)
     t2_sq: torch.Tensor = tensor2.mul(tensor2).sum(dim=-1, keepdim=True).transpose(1, 2)
-    t1_t2: torch.Tensor = tensor1.matmul(tensor2.transpose(1, 2))
+    # SDAA matmul not support fp64
+    if 'sdaa' in tensor1.device.type and tensor1.dtype == torch.float64:
+        device = tensor1.device
+        t1_t2: torch.Tensor = tensor1.cpu().matmul(tensor2.transpose(1, 2).cpu()).to(device)
+    else:
+        t1_t2: torch.Tensor = tensor1.matmul(tensor2.transpose(1, 2))
     square_dist: torch.Tensor = -2 * t1_t2 + t1_sq + t2_sq
     square_dist = square_dist.clamp(min=0)  # handle possible numerical errors
     return square_dist

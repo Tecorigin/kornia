@@ -16,7 +16,7 @@
 #
 
 import torch
-
+import pytest
 import kornia
 
 from testing.base import BaseTester
@@ -106,6 +106,7 @@ class TestCropAndResize(BaseTester):
             kornia.geometry.transform.crop_and_resize, (img, boxes, (4, 2)), requires_grad=(True, False, False)
         )
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = kornia.geometry.transform.crop_and_resize
@@ -177,6 +178,7 @@ class TestCenterCrop(BaseTester):
 
         self.gradcheck(kornia.geometry.transform.center_crop, (img, (4, 2)))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = kornia.geometry.transform.center_crop
@@ -287,6 +289,7 @@ class TestCropByIndices(BaseTester):
 
         self.assert_close(kornia.geometry.transform.crop_by_indices(inp, indices), expected)
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         # Define script
         op = kornia.geometry.transform.crop_by_indices

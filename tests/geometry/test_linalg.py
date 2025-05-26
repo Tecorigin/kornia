@@ -57,6 +57,7 @@ class TestTransformPoints(BaseTester):
         # evaluate function gradient
         self.gradcheck(kornia.geometry.transform_points, (dst_homo_src, points_src))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         points = torch.ones(1, 2, 2, device=device, dtype=dtype)
         transform = kornia.eye_like(3, points)
@@ -355,6 +356,7 @@ class TestEuclideanDistance(BaseTester):
         pt2 = torch.rand(2, 3, device=device, dtype=torch.float64, requires_grad=True)
         self.gradcheck(kgl.euclidean_distance, (pt1, pt2))
 
+    @pytest.mark.skip(reason="SDAA not support backend='inductor'")
     def test_dynamo(self, device, dtype, torch_optimizer):
         pt1 = torch.rand(2, 3, device=device, dtype=dtype)
         pt2 = torch.rand(2, 3, device=device, dtype=dtype)

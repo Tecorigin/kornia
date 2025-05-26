@@ -629,7 +629,12 @@ def conv_quad_interp3d(input: Tensor, strict_maxima_bonus: float = 10.0, eps: fl
     # Ignore ones, which are far from window center
     mask1 = dx.abs().max(dim=1, keepdim=True)[0] > 0.7
     dx.masked_fill_(mask1.expand_as(dx), 0)
-    dy: Tensor = 0.5 * torch.bmm(b.permute(0, 2, 1), dx)
+    # SDAA not support bmm fp64
+    if 'sdaa' in b.device.type and b.dtype == torch.float64:
+        device = b.device
+        dy: Tensor = 0.5 * torch.bmm(b.permute(0, 2, 1).cpu(), dx.cpu()).to(device)
+    else:    
+        dy: Tensor = 0.5 * torch.bmm(b.permute(0, 2, 1), dx)
     y_max = input + dy.view(B, CH, D, H, W)
     if strict_maxima_bonus > 0:
         y_max += strict_maxima_bonus * new_nms_mask.to(input.dtype)

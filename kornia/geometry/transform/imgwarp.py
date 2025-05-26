@@ -477,7 +477,12 @@ def get_rotation_matrix2d(center: Tensor, angle: Tensor, scale: Tensor) -> Tenso
     rotat_m = eye_like(3, center)
     rotat_m[:, :2, :2] = angle_to_rotation_matrix(angle)
 
-    affine_m = shift_m @ rotat_m @ scale_m @ shift_m_inv
+    # sdaa @ not support fp64
+    if 'sdaa' in shift_m.device.type and shift_m.dtype == torch.float64:
+        device = shift_m.device
+        affine_m = (shift_m.cpu() @ rotat_m.cpu() @ scale_m.cpu() @ shift_m_inv.cpu()).to(device)
+    else:
+        affine_m = shift_m @ rotat_m @ scale_m @ shift_m_inv
     return affine_m[:, :2, :]  # Bx2x3
 
 
@@ -688,8 +693,14 @@ def get_shear_matrix2d(center: Tensor, sx: Optional[Tensor] = None, sy: Optional
     x, y = torch.split(center, 1, dim=-1)
     x, y = x.view(-1), y.view(-1)
 
-    sx_tan = tan(sx)
-    sy_tan = tan(sy)
+    # SDAA tan not support fp64
+    if 'sdaa' in sx.device.type and sx.dtype == torch.float64:
+        device = sx.device
+        sx_tan = tan(sx.cpu()).to(device)
+        sy_tan = tan(sy.cpu()).to(device)
+    else:
+        sx_tan = tan(sx)
+        sy_tan = tan(sy)
     ones = ones_like(sx)
     shear_mat = stack(
         [ones, -sx_tan, sx_tan * y, -sy_tan, ones + sx_tan * sy_tan, sy_tan * (x - sx_tan * y)], dim=-1
@@ -907,7 +918,8 @@ def warp_affine3d(
     # compute meshgrid and apply to input
     dsize_out: list[int] = [B, C, *list(size_out)]
     grid = F.affine_grid(P_norm, dsize_out, align_corners=align_corners)
-    return F.grid_sample(src, grid, align_corners=align_corners, mode=flags, padding_mode=padding_mode)
+    # SDAA grid_sampler_3d on CPU
+    return F.grid_sample(src, grid.to(src.dtype), align_corners=align_corners, mode=flags, padding_mode=padding_mode)
 
 
 def projection_from_Rt(rmat: Tensor, tvec: Tensor) -> Tensor:
@@ -970,7 +982,12 @@ def get_projective_transform(center: Tensor, angles: Tensor, scales: Tensor) -> 
     rmat: Tensor = axis_angle_to_rotation_matrix(axis_angle_rad)  # Bx3x3
     scaling_matrix: Tensor = eye_like(3, rmat)
     scaling_matrix = scaling_matrix * scales.unsqueeze(dim=1)
-    rmat = rmat @ scaling_matrix.to(rmat)
+    # SDAA @ not support fp64
+    if 'sdaa' in rmat.device.type and rmat.dtype == torch.float64:
+        device = rmat.device
+        rmat = (rmat.cpu() @ scaling_matrix.to(rmat).cpu()).to(device)
+    else:
+        rmat = rmat @ scaling_matrix.to(rmat)
 
     # define matrix to move forth and back to origin
     from_origin_mat = eye_like(4, rmat, shared_memory=False)  # Bx4x4
@@ -984,7 +1001,12 @@ def get_projective_transform(center: Tensor, angles: Tensor, scales: Tensor) -> 
 
     # chain 4x4 transforms
     proj_mat = convert_affinematrix_to_homography3d(proj_mat)  # Bx4x4
-    proj_mat = from_origin_mat @ proj_mat @ to_origin_mat
+    # SDAA @ not support fp64
+    if 'sdaa' in proj_mat.device.type and proj_mat.dtype == torch.float64:
+        device = proj_mat.device
+        proj_mat = (from_origin_mat.cpu() @ proj_mat.cpu() @ to_origin_mat.cpu()).to(device)
+    else:
+        proj_mat = from_origin_mat @ proj_mat @ to_origin_mat
 
     return proj_mat[..., :3, :]  # Bx3x4
 

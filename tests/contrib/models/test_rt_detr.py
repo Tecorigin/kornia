@@ -78,6 +78,7 @@ def test_head(device, dtype):
     assert boxes.shape == (N, num_queries, 4)
 
 
+@pytest.mark.skip(reason="SDAA prec bug of fuse_conv_bn_weights")
 def test_regvgg_optimize_for_deployment(device, dtype):
     module = RepVggBlock(64, 64).to(device, dtype).eval()
     x = torch.randn(2, 64, 9, 9, device=device, dtype=dtype)
