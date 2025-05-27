@@ -4,8 +4,8 @@ diffusers
 ivy>=1.0.0.0
 mypy
 numpy<3
-onnx
-onnxruntime
+onnx==1.17.0
+onnxruntime==1.21.1
 pillow
 pre-commit>=2
 pytest==8.3.5
