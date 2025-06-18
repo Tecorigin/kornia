@@ -80,15 +80,15 @@ Kornia is an open-source project that is developed and maintained by volunteers.
   <img src="https://opencollective.com/webpack/donate/button@2x.png?color=blue" width=300 />
 </a>
 
-## Installation
+## Installation for SDAA
 
 [![PyPI python](https://img.shields.io/pypi/pyversions/kornia)](https://pypi.org/project/kornia)
 [![pytorch](https://img.shields.io/badge/PyTorch_1.9.1+-ee4c2c?logo=pytorch&logoColor=white)](https://pytorch.org/get-started/locally/)
 
-### From pip
+### Use pip
 
   ```bash
-  pip install kornia
+  pip install kornia-0.8.1-py2.py3-none-any.whl
   ```
 
 <details>
@@ -100,15 +100,11 @@ Kornia is an open-source project that is developed and maintained by volunteers.
   pip install -e .
   ```
 
-#### From Github url (latest version)
-
-  ```bash
-  pip install git+https://github.com/kornia/kornia
-  ```
-
 </details>
 
 ## Quick Start
+
+To use on SDAA platform: export TORCH_SDAA_AUTOLOAD=cuda_migrate
 
 Kornia is not just another computer vision library — it's your gateway to effortless Computer Vision and AI.
 
