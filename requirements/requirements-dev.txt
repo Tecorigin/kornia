@@ -4,7 +4,7 @@ diffusers
 ivy>=1.0.0.0
 mypy
 numpy<3
-onnx==1.17.0
+onnx==1.18.0
 onnxruntime==1.21.1
 pillow
 pre-commit>=2
