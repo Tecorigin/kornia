@@ -1,5 +1,5 @@
 furo
-ivy>=1.0.0.0
+ivy>=1.0.0.5
 kornia_moons
 matplotlib
 onnx
